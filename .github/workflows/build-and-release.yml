@@ -28,6 +28,11 @@ jobs:
           name: dist
           path: dist/
       
+      - name: Tagger - Move semantic tags!
+        uses: fischerscode/tagger@v0.1.0
+        with:
+          tag: ${{ github.event.inputs.version }}
+      
       - uses: ncipollo/release-action@v1
         with:
           artifacts: "dist/*"
