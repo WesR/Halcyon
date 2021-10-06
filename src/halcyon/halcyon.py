@@ -74,7 +74,7 @@ class Client:
                     accessToken = decodedToken["token"]
                     deviceID = decodedToken["device_id"]
 
-            self.restrunner = restrunner.Runner(homeserver=homeserver, user_id=userID, access_token=accessToken, device_id=deviceID)
+            self.restrunner = halcyon.restrunner.Runner(homeserver=homeserver, user_id=userID, access_token=accessToken, device_id=deviceID)
 
             resp = self.restrunner.whoami()
             if "errcode" not in resp:
@@ -84,7 +84,7 @@ class Client:
 
         if userID and password:
             if homeserver:
-                self.restrunner = restrunner.Runner(homeserver=homeserver, user_id=userID)
+                self.restrunner = halcyon.restrunner.Runner(homeserver=homeserver, user_id=userID)
                 client._generateNewSessionToken(userID, password)
                 self.logoutOnDeath = True
                 #TODO: state.json file
