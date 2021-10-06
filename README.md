@@ -20,7 +20,7 @@ Encryption must be transparent to the user. Check the roadmap in [notes.md](./no
 
 ## Getting started
 1. Create an account to use as a bot account
-2. Install the package with `python3 -m pip install halcyon`
+2. Download and install the package from the releases tab on github `python3 -m pip install ./halcyon.whl`
 3. Generate a token using `python3 -m halcyon -s homeserver.xyz -u @user:homeserver.xyz -p yourP@$$w0rd`
 4. Start with the demo below
 
