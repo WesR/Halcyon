@@ -1,7 +1,7 @@
 ## Halcyon *on and on*
 
 The goal of this project is to have an easy to install and use Matrix bot library similar to the Discord or Slack libs.
-Encryption must be transparent to the user. Check the roadmap in [notes.md](./notes.md)
+Encryption must be transparent to the user. Check the roadmap in [notes.md](./notes.md) and see how the token works in [tokenFormat.md](./tokenFormat.md)
 
 ## Current features
 - [x] A nice command prompt to generate Halcyon tokens
@@ -20,7 +20,7 @@ Encryption must be transparent to the user. Check the roadmap in [notes.md](./no
 
 ## Getting started
 1. Create an account to use as a bot account
-2. Install using `python3 -m pip install halcyon-matrix` or using the Releases tab
+2. Install using `python3 -m pip install halcyon` or using the Releases tab
 3. Generate a token using `python3 -m halcyon -s homeserver.xyz -u @user:homeserver.xyz -p yourP@$$w0rd`
 4. Start with the demo below
 

@@ -1,3 +1,3 @@
 from .halcyon import *
 
-#from .restrunner import *
+from .restrunner import *
