@@ -1,12 +1,12 @@
 ## Halcyon *on and on*
 
-The goal of this project is to have an easy to install and use Matrix bot library similar to the Discord or Slack libs.
-Encryption must be transparent to the user (TODO). Check the roadmap in [notes.md](./notes.md) and see how the token works in [tokenFormat.md](./tokenFormat.md)
+Halcyon is a Matrix bot library with the goal of being easy to install and use. The library takes inspiration from discord.py and the Slack libraries.
+Encryption is on the roadmap, and with the goal of being transparent to the user. Check the roadmap in [notes.md](./notes.md), and see information of the token format in [tokenFormat.md](./tokenFormat.md)
 
-Ask questions in the matrix chat [#halcyon:blackline.xyz](https://matrix.to/#/#halcyon:blackline.xyz) or in github issues.
+Ask questions in the matrix chat [#halcyon:blackline.xyz](https://matrix.to/#/#halcyon:blackline.xyz) or in GitHub issues.
 
 ## Current features
-- [x] A nice command prompt to generate Halcyon tokens
+- [x] A nice CLI tool to generate Halcyon tokens
 - [x] Login with token or username/password
 - [x] Fetch for new messages every x seconds using await
 - [x] Event hooks for
@@ -18,13 +18,13 @@ Ask questions in the matrix chat [#halcyon:blackline.xyz](https://matrix.to/#/#h
     - [x] send_message(self, roomID, body, textFormat=None, replyTo=None, isNotice=False)
     - [x] async def join_room(self, roomID)
 - [x] Room and message objects for incoming events events
-- [ ] documentation
+- [ ] Documentation
 
 ## Getting started
-1. Create an account to use as a bot account
-2. Install using `python3 -m pip install halcyon` or using the Releases tab
+1. Create a matrix account for the bot
+2. Install Halcyon using `python3 -m pip install halcyon` or download it from the Releases tab in Github
 3. Generate a token using `python3 -m halcyon -s homeserver.xyz -u @user:homeserver.xyz -p yourP@$$w0rd`
-4. Start with the demo below
+4. Start with the demo code below
 
 ## Example bot code
 
@@ -45,6 +45,7 @@ async def on_room_invite(room):
 @client.event
 async def on_message(message):
     """If we see a message with the phrase 'give me random', do a reply message with 32 random characters"""
+    print(message.event.id)
     if "give me random" in message.content.body:
         body = "This looks random: " + requests.get("https://random.wesring.com").json()["value"]
         await client.send_message(message.room.id, body=body, replyTo=message.event.id)
@@ -55,8 +56,8 @@ if __name__ == '__main__':
 ```
 
 ### CLI usage
-halcyon can be called from the CLI to do some managment of the account. \
-See the readme with `python3 -m halcyon -h`
+halcyon can be called from the CLI to do some management of the account. \
+See the help message with `python3 -m halcyon -h`
 Right now it can be used to
 1. generate a new token
 2. decode an existing token

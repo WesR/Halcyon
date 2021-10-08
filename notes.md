@@ -1,13 +1,15 @@
+# Notes, ideas, and goals
 As of right now, you can login, then you get a long lived token
 
 Room obj ideas: 
 + have a room full and room minimal, because you don't normally need to waste the time parsing all this
++ alternatively, have a room Cache state that gets build on botup
 
 Handle:
 Type: 
-    m.room.message [FULL]
-    m.reaction
-    m.room.member
++ m.room.message [FULL]
++ m.reaction
++ m.room.member
 
 
 ## Outline
@@ -26,12 +28,13 @@ Type:
 - [x] simple user token
 - [x] client.send_message
 - [ ] documentation
-- [ ] github whl builder
+- [x] GitHub whl builder
 
 ## RC 2
+- [ ] Bot on_ready
 - [ ] Room cache (dict of room obj to build off of)
 - [ ] Media REST services
-- [ ] Send and recieve Media
+- [ ] Send and receive Media
 - [ ] Better presence
 - [ ] send_typing
 
@@ -45,6 +48,7 @@ Type:
 6. client presence
 7. client.send_typing
 
+This was a design idea, not actual code. I needed something to work to.
 ```python
 client = halcyon.Client()
 
