@@ -1,0 +1,44 @@
+name: Build and push to github+pypi
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The package release version
+        required: true
+        default: 1.0.0
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v2.2.2
+
+      - name: install buildtools
+        run: python3 -m pip install --upgrade pip build twine
+        
+      - name: build
+        run: python3 -m build
+      
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v2.2.4
+        with:
+          name: dist
+          path: dist/
+      
+      - name: Tag commit
+        uses: tvdias/github-tagger@v0.0.1
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+          tag: ${{ github.event.inputs.version }}
+          
+      - uses: ncipollo/release-action@v1
+        with:
+          artifacts: "dist/*"
+          tag: ${{ github.event.inputs.version }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push to pypi
+        run: twine upload -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }} ./dist/*
