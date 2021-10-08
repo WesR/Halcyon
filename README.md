@@ -1,12 +1,14 @@
 ## Halcyon *on and on*
 
 The goal of this project is to have an easy to install and use Matrix bot library similar to the Discord or Slack libs.
-Encryption must be transparent to the user. Check the roadmap in [notes.md](./notes.md) and see how the token works in [tokenFormat.md](./tokenFormat.md)
+Encryption must be transparent to the user (TODO). Check the roadmap in [notes.md](./notes.md) and see how the token works in [tokenFormat.md](./tokenFormat.md)
+
+Ask questions in the matrix chat [#halcyon:blackline.xyz](https://matrix.to/#/#halcyon:blackline.xyz) or in github issues.
 
 ## Current features
 - [x] A nice command prompt to generate Halcyon tokens
 - [x] Login with token or username/password
-- [X] Fetch for new messages every x seconds using await
+- [x] Fetch for new messages every x seconds using await
 - [x] Event hooks for
     - [x] on_message(self, message)
     - [x] on_message_edit(self, message)
@@ -15,8 +17,8 @@ Encryption must be transparent to the user. Check the roadmap in [notes.md](./no
 - [x] Action hooks
     - [x] send_message(self, roomID, body, textFormat=None, replyTo=None, isNotice=False)
     - [x] async def join_room(self, roomID)
+- [x] Room and message objects for incoming events events
 - [ ] documentation
-- [ ] github whl builder
 
 ## Getting started
 1. Create an account to use as a bot account
@@ -53,7 +55,13 @@ if __name__ == '__main__':
 ```
 
 ### CLI usage
-halcyon can be called from the CLI to do some managment of the account. See the readme with `python3 -m halcyon -h`
+halcyon can be called from the CLI to do some managment of the account. \
+See the readme with `python3 -m halcyon -h`
+Right now it can be used to
+1. generate a new token
+2. decode an existing token
+3. revoke a single token
+4. revoke all tokens
 
 ```
 usage: halcyon [-h] [-s SERVER] [-u USERNAME] [-p PASSWORD] [--include-password] [--decode DECODE] [--pretty] [--revoke REVOKE] [--revoke-all-tokens REVOKE_ALL_TOKENS]
