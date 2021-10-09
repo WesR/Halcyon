@@ -3,6 +3,26 @@
 This is the message object that will be created for each message
 """
 
+"""
+    m.text
+    m.emote
+    m.notice
+    m.image
+    m.file
+    m.audio
+    m.location
+    m.video
+"""
+class msgType(str, enum.Enum):
+     TEXT = "m.text"
+     EMOTE = "m.emote"
+     NOTICE = "m.notice"
+     IMAGE = "m.image"
+     FILE = "m.file"
+     AUDIO = "m.audio"
+     LOCATION = "m.location"
+     VIDEO = "m.video"
+
 class message(object):
     def __init__(self, rawMessage=None, roomID=None):
         self._raw = rawMessage
@@ -43,6 +63,9 @@ class message(object):
             self.body = None
             self.format = None
             self.formattedBody = None
+
+            self.url = None
+            self.info = None
             
             self._raw = rawContent
             self._hasData = False
@@ -58,11 +81,42 @@ class message(object):
                 "format": "org.matrix.custom.html",
                 "formatted_body": " * <em>almost to alpha1</em> this works ala <a href"
             """
+            """
+                "body": "ima_1de2d8f.jpeg",
+                "info": {
+                  "size": 2534288,
+                  "mimetype": "image/jpeg",
+                  "w": 3024,
+                  "h": 4032
+                },
+                "url": "mxc://blackline.xyz/MZANSwsvznNvjxSBksFssgas",
+                "msgtype": "m.image"
 
-            self.type = rawContent.get("msgtype")
+                "body": "junk",
+                "info": {
+                  "size": 14155776
+                },
+                "msgtype": "m.file",
+                "url": "mxc://blackline.xyz/kuknpUPzsxjoAeIWiyhXyTsR"
+            """
+            """
+                m.text
+                m.emote
+                m.notice
+                m.image
+                m.file
+                m.audio
+                m.location
+                m.video
+            """
+
+            self.type = msgType(rawContent.get("msgtype"))
             self.body = rawContent.get("body")
             self.format = rawContent.get("format")
             self.formattedBody = rawContent.get("formatted_body")
+
+            self.url = rawContent.get("url")
+            self.info = self.fileInfo(rawMessage.get("info"))
             self._hasData = True
 
         def __bool__(self):
@@ -70,6 +124,36 @@ class message(object):
 
         #def __str__(self):
         #    return self._raw
+
+    class fileInfo(object):
+        def __init__(self, rawContent=None):
+            self.size = None
+            self.mimetype = None
+            self.height = None
+            self.width = None
+
+            self._raw = rawContent
+            self._hasData = False
+
+            if rawContent:
+                self._parseRawContent(rawContent)
+
+        def _parseRawContent(self, rawContent):
+            """
+                "size": 2534288,
+                "mimetype": "image/jpeg",
+                "w": 3024,
+                "h": 4032
+            """
+
+            self.size = rawContent.get("size")
+            self.mimetype = rawContent.get("mimetype")
+            self.height = rawContent.get("h")
+            self.width = rawContent.get("w")
+            self._hasData = True
+
+        def __bool__(self):
+            return self._hasData
 
     class relates(object):
         def __init__(self, rawContent=None):
