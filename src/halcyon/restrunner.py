@@ -1,5 +1,6 @@
 import json, requests, enum, uuid, time
 import logging
+from StringIO import StringIO
 
 class Basepath(str, enum.Enum):
     CLIENT = "_matrix/client/r0"
@@ -21,7 +22,7 @@ class Runner:
             @param homeserver String the homeserver to talk to
             @param user_id String OPTIONAL the  username to use
             @param access_token String OPTIONAL this is a valid session token to use
-            @param device_id String OPTIONAL this is the device random ID 
+            @param device_id String OPTIONAL this is the device randmo ID 
         '''
         if "https://" not in homeserver and "http://" not in homeserver:
             homeserver = "https://" + homeserver
@@ -36,7 +37,7 @@ class Runner:
         if homeserver:
             self.HOMESERVER = self._wellknownLookup(homeserver)["m.homeserver"]["base_url"]
 
-    def _request(self, method, endpoint, basepath=None, query=None, payload=None):
+    def _request(self, method, endpoint, basepath=None, query=None, payload=None, returnRawContent=None):
         """
         The request method
 
@@ -61,15 +62,18 @@ class Runner:
         #print(str(headers))
         resp = self.SESSION.request(method, url, json=payload, headers=headers, params=query)
 
-        return resp.json()
+        if returnRawContent:
+            return resp.content
+        else:
+            return resp.json()
 
-    def _get(self, endpoint, basepath=None, query=None):
+    def _get(self, endpoint, basepath=None, query=None, returnRawContent=None):
         """
         @param endpoint String rest of the https string
         @param basepath enum OPTIONAL The basepath for the request (defaults to client)
         @param query Dict OPTIONAL url query
         """
-        return self._request(method="GET", endpoint=endpoint, basepath=basepath, query=query)
+        return self._request(method="GET", endpoint=endpoint, basepath=basepath, query=query, returnRawContent=returnRawContent)
 
     def _post(self, endpoint, basepath=None, query=None, payload=None):
         """
@@ -303,3 +307,38 @@ class Runner:
         time.time().strip(".")
 
         return self._put(endpoint=endpoint, payload=eventPayload)
+
+
+        """
+
+            Media API
+
+        """
+
+    def getMedia(self, serverName, mediaID, allowRemote=True):
+        """
+            Get the raw media file from matrix as a StringIO
+
+            @param serverName String the server the media is on
+            @param mediaID String the ID of the string
+            @param allowRemote Bool OPTIONAL Allow the homeserver to download media from remote servers
+
+            @return StringIO(media)
+        """
+
+        query = {
+            "allow_remote" : allowRemote
+        }
+
+        endpoint = "download/" + serverName + "/" + mediaID
+        return StringIO(_get(endpoint=endpoint, basepath=Basepath.MEDIA, query=query, returnRawContent=True))
+
+    def getMediaFromMXC(self, mxc):
+        """
+            Download an image from a mxc url
+            
+            @param mxc String mxc url
+            @return StringIO(media)
+        """
+        mediaURL = mxc.strip("mxc://").split("/")
+        return getMedia(serverName=mediaURL[0], mediaID=[1])
