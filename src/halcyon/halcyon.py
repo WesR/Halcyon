@@ -20,7 +20,7 @@ class Client:
         self.loopPollInterval = 7#seconds
 
         self.restrunner = None
-        self.sinceToken = str()#"s168053_9238002_211_518042_38777_66_34968_77975_20"#str()
+        self.sinceToken = str()
         self.encryptedCurveCount = 0
         self.ignoreFirstSync = ignoreFirstSync
         self.firstSync = True
@@ -229,9 +229,11 @@ class Client:
             }
 
         return(self.restrunner.sendEvent(roomID=roomID, eventType="m.room.message", eventPayload=messageContent))
+    
 
     async def join_room(self, roomID):
         return(self.restrunner.joinRoom(roomID))
+        
 
     def event(self, coro):
         # Validation we don't need to worry about

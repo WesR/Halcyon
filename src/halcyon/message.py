@@ -1,17 +1,17 @@
-
+import enum
 """
 This is the message object that will be created for each message
 """
 
 """
-    m.text
-    m.emote
-    m.notice
-    m.image
-    m.file
-    m.audio
+    m.text ✔
+    m.emote ✔
+    m.notice ✔
+    m.image ✔
+    m.file ✔
+    m.audio ✔
     m.location
-    m.video
+    m.video ✔
 """
 class msgType(str, enum.Enum):
      TEXT = "m.text"
@@ -22,6 +22,7 @@ class msgType(str, enum.Enum):
      AUDIO = "m.audio"
      LOCATION = "m.location"
      VIDEO = "m.video"
+
 
 class message(object):
     def __init__(self, rawMessage=None, roomID=None):
@@ -128,9 +129,11 @@ class message(object):
     class fileInfo(object):
         def __init__(self, rawContent=None):
             self.size = None
+            self.duration = None
             self.mimetype = None
             self.height = None
             self.width = None
+            self.thumbnail = None
 
             self._raw = rawContent
             self._hasData = False
@@ -144,6 +147,41 @@ class message(object):
                 "mimetype": "image/jpeg",
                 "w": 3024,
                 "h": 4032
+            """
+
+            self.size = rawContent.get("size")
+            self.duration = rawContent.get("duration")#in ms
+            self.thumbnail = self.thumbnail(rawContent.get("thumbnail_info"), thumbnailURL=rawContent.get("thumbnail_url"), thumbnailFile=rawContent.get("thumbnail_file"))
+            self.mimetype = rawContent.get("mimetype")
+            self.height = rawContent.get("h")
+            self.width = rawContent.get("w")
+            self._hasData = True
+
+        def __bool__(self):
+            return self._hasData
+
+    class thumbnail(object):
+        def __init__(self, rawContent=None, thumbnailURL=None, thumbnailFile=None):
+            self.size = None
+            self.mimetype = None
+            self.height = None
+            self.width = None
+
+            self.url = thumbnailURL
+            self.file = thumbnailFile #encrypted file
+
+            self._raw = rawContent
+            self._hasData = False
+
+            if rawContent:
+                self._parseRawContent(rawContent)
+
+        def _parseRawContent(self, rawContent):
+            """
+                "h": 300,
+                "mimetype": "image/jpeg",
+                "size": 46144,
+                "w": 300
             """
 
             self.size = rawContent.get("size")
