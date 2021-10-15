@@ -323,7 +323,7 @@ class Runner:
             @param mediaID String the ID of the string
             @param allowRemote Bool OPTIONAL Allow the homeserver to download media from remote servers
 
-            @return StringIO(media)
+            @return BytesIO(media)
         """
 
         query = {
@@ -331,17 +331,17 @@ class Runner:
         }
 
         endpoint = "download/" + serverName + "/" + mediaID
-        return StringIO(_get(endpoint=endpoint, basepath=Basepath.MEDIA, query=query, returnRawContent=True))
+        return io.BytesIO(self._get(endpoint=endpoint, basepath=Basepath.MEDIA, query=query, returnRawContent=True))
 
     def getMediaFromMXC(self, mxc):
         """
             Download an image from a mxc url
             
             @param mxc String mxc url
-            @return StringIO(media)
+            @return BytesIO(media)
         """
         mediaURL = mxc.strip("mxc://").split("/")
-        return getMedia(serverName=mediaURL[0], mediaID=[1])
+        return self.getMedia(serverName=mediaURL[0], mediaID=mediaURL[1])
 
 
     def uploadMedia(self, fileData, fileName):
@@ -349,7 +349,7 @@ class Runner:
             Download an image from a mxc url
             
             @param mxc String mxc url
-            @return StringIO(media)
+            @return BytesIO(media)
         """
         contentType=""
 
@@ -359,5 +359,4 @@ class Runner:
         }
 
         #multipart? https://docs.python-requests.org/en/master/user/advanced/#post-multiple-multipart-encoded-files
-        #files = {'file': fileData}
-        return _post(endpoint=endpoint, basepath=Basepath.MEDIA, query=query, fileData=fileData)
+        return self._post(endpoint=endpoint, basepath=Basepath.MEDIA, query=query, fileData=fileData)

@@ -9,6 +9,7 @@ import signal
 import halcyon.restrunner
 from halcyon.message import *
 from halcyon.room import *
+from halcyon.enums import *
 
 class Client:
     """
@@ -233,7 +234,25 @@ class Client:
 
     async def join_room(self, roomID):
         return(self.restrunner.joinRoom(roomID))
-        
+    
+    async def download_media(self, mxc):
+        """
+            Returns a BytesIO file fetched from an MXC
+
+            @param String MXC url
+
+            @return BytesIO bufffer
+        """
+        return(self.restrunner.getMediaFromMXC(mxc))
+
+    async def upload_media(self, fileBuffer, fileName):
+        """
+            Upload a file
+
+            @param file BytesIO object
+            @param fileName filename for the object
+        """
+        return(self.restrunner.uploadMedia(fileData=fileBuffer, fileName=fileName))
 
     def event(self, coro):
         # Validation we don't need to worry about

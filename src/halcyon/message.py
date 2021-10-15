@@ -1,4 +1,4 @@
-import enum
+from halcyon.enums import *
 """
 This is the message object that will be created for each message
 """
@@ -13,16 +13,6 @@ This is the message object that will be created for each message
     m.location
     m.video ✔
 """
-class msgType(str, enum.Enum):
-     TEXT = "m.text"
-     EMOTE = "m.emote"
-     NOTICE = "m.notice"
-     IMAGE = "m.image"
-     FILE = "m.file"
-     AUDIO = "m.audio"
-     LOCATION = "m.location"
-     VIDEO = "m.video"
-
 
 class message(object):
     def __init__(self, rawMessage=None, roomID=None):
@@ -117,7 +107,7 @@ class message(object):
             self.formattedBody = rawContent.get("formatted_body")
 
             self.url = rawContent.get("url")
-            self.info = self.fileInfo(rawMessage.get("info"))
+            self.info = self.fileInfo(rawContent.get("info"))
             self._hasData = True
 
         def __bool__(self):
@@ -126,72 +116,72 @@ class message(object):
         #def __str__(self):
         #    return self._raw
 
-    class fileInfo(object):
-        def __init__(self, rawContent=None):
-            self.size = None
-            self.duration = None
-            self.mimetype = None
-            self.height = None
-            self.width = None
-            self.thumbnail = None
+        class fileInfo(object):
+            def __init__(self, rawContent=None):
+                self.size = None
+                self.duration = None
+                self.mimetype = None
+                self.height = None
+                self.width = None
+                self.thumbnail = None
 
-            self._raw = rawContent
-            self._hasData = False
+                self._raw = rawContent
+                self._hasData = False
 
-            if rawContent:
-                self._parseRawContent(rawContent)
+                if rawContent:
+                    self._parseRawContent(rawContent)
 
-        def _parseRawContent(self, rawContent):
-            """
-                "size": 2534288,
-                "mimetype": "image/jpeg",
-                "w": 3024,
-                "h": 4032
-            """
+            def _parseRawContent(self, rawContent):
+                """
+                    "size": 2534288,
+                    "mimetype": "image/jpeg",
+                    "w": 3024,
+                    "h": 4032
+                """
 
-            self.size = rawContent.get("size")
-            self.duration = rawContent.get("duration")#in ms
-            self.thumbnail = self.thumbnail(rawContent.get("thumbnail_info"), thumbnailURL=rawContent.get("thumbnail_url"), thumbnailFile=rawContent.get("thumbnail_file"))
-            self.mimetype = rawContent.get("mimetype")
-            self.height = rawContent.get("h")
-            self.width = rawContent.get("w")
-            self._hasData = True
+                self.size = rawContent.get("size")
+                self.duration = rawContent.get("duration")#in ms
+                self.thumbnail = self.thumbnail(rawContent.get("thumbnail_info"), thumbnailURL=rawContent.get("thumbnail_url"), thumbnailFile=rawContent.get("thumbnail_file"))
+                self.mimetype = rawContent.get("mimetype")
+                self.height = rawContent.get("h")
+                self.width = rawContent.get("w")
+                self._hasData = True
 
-        def __bool__(self):
-            return self._hasData
+            def __bool__(self):
+                return self._hasData
 
-    class thumbnail(object):
-        def __init__(self, rawContent=None, thumbnailURL=None, thumbnailFile=None):
-            self.size = None
-            self.mimetype = None
-            self.height = None
-            self.width = None
+            class thumbnail(object):
+                def __init__(self, rawContent=None, thumbnailURL=None, thumbnailFile=None):
+                    self.size = None
+                    self.mimetype = None
+                    self.height = None
+                    self.width = None
 
-            self.url = thumbnailURL
-            self.file = thumbnailFile #encrypted file
+                    self.url = thumbnailURL
+                    self.file = thumbnailFile #encrypted file
 
-            self._raw = rawContent
-            self._hasData = False
+                    self._raw = rawContent
+                    self._hasData = False
 
-            if rawContent:
-                self._parseRawContent(rawContent)
+                    if rawContent:
+                        self._parseRawContent(rawContent)
 
-        def _parseRawContent(self, rawContent):
-            """
-                "h": 300,
-                "mimetype": "image/jpeg",
-                "size": 46144,
-                "w": 300
-            """
+                def _parseRawContent(self, rawContent):
+                    """
+                        "h": 300,
+                        "mimetype": "image/jpeg",
+                        "size": 46144,
+                        "w": 300
+                    """
 
-            self.size = rawContent.get("size")
-            self.mimetype = rawContent.get("mimetype")
-            self.height = rawContent.get("h")
-            self.width = rawContent.get("w")
-            self._hasData = True
+                    self.size = rawContent.get("size")
+                    self.mimetype = rawContent.get("mimetype")
+                    self.height = rawContent.get("h")
+                    self.width = rawContent.get("w")
+                    self._hasData = True
 
-        def __bool__(self):
-            return self._hasData
+                def __bool__(self):
+                    return self._hasData
 
     class relates(object):
         def __init__(self, rawContent=None):
