@@ -1,6 +1,6 @@
 import json, requests, enum, uuid, time
 import logging
-from StringIO import StringIO
+import io
 
 class Basepath(str, enum.Enum):
     CLIENT = "_matrix/client/r0"
@@ -37,7 +37,7 @@ class Runner:
         if homeserver:
             self.HOMESERVER = self._wellknownLookup(homeserver)["m.homeserver"]["base_url"]
 
-    def _request(self, method, endpoint, basepath=None, query=None, payload=None, returnRawContent=None):
+    def _request(self, method, endpoint, basepath=None, query=None, payload=None, returnRawContent=None, fileData=None):
         """
         The request method
 
@@ -60,7 +60,7 @@ class Runner:
 
         #print(url)
         #print(str(headers))
-        resp = self.SESSION.request(method, url, json=payload, headers=headers, params=query)
+        resp = self.SESSION.request(method, url, json=payload, headers=headers, params=query, data=fileData)
 
         if returnRawContent:
             return resp.content
@@ -75,14 +75,14 @@ class Runner:
         """
         return self._request(method="GET", endpoint=endpoint, basepath=basepath, query=query, returnRawContent=returnRawContent)
 
-    def _post(self, endpoint, basepath=None, query=None, payload=None):
+    def _post(self, endpoint, basepath=None, query=None, payload=None, fileData=None):
         """
         @param endpoint String rest of the https string
         @param basepath enum OPTIONAL The basepath for the request (defaults to client)
         @param query Dict OPTIONAL url query
         @param payload Dict/json OPTIONAL The json payload
         """
-        return self._request(method="POST", endpoint=endpoint, basepath=basepath, query=query, payload=payload)
+        return self._request(method="POST", endpoint=endpoint, basepath=basepath, query=query, payload=payload, fileData=fileData)
 
     def _put(self, endpoint, basepath=None, query=None, payload=None):
         """
@@ -342,3 +342,22 @@ class Runner:
         """
         mediaURL = mxc.strip("mxc://").split("/")
         return getMedia(serverName=mediaURL[0], mediaID=[1])
+
+
+    def uploadMedia(self, fileData, fileName):
+        """
+            Download an image from a mxc url
+            
+            @param mxc String mxc url
+            @return StringIO(media)
+        """
+        contentType=""
+
+        endpoint = "upload"
+        query = {
+            "filename" : fileName
+        }
+
+        #multipart? https://docs.python-requests.org/en/master/user/advanced/#post-multiple-multipart-encoded-files
+        #files = {'file': fileData}
+        return _post(endpoint=endpoint, basepath=Basepath.MEDIA, query=query, fileData=fileData)
