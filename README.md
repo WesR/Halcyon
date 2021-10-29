@@ -27,7 +27,7 @@ Ask questions in the matrix chat [#halcyon:blackline.xyz](https://matrix.to/#/#h
 4. Start with the demo code below
 
 ## Example bot code
-
+See more example and message object info in [usage.md](./usage.md)
 ```python
 import halcyon
 import requests, json

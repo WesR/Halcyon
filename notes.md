@@ -33,8 +33,8 @@ Type:
 ## RC 2
 - [ ] Bot on_ready
 - [ ] Room cache (dict of room obj to build off of)
-- [ ] Media REST services
-- [ ] Send and receive Media
+- [x] Media REST services
+- [x] Send and receive Media
 - [ ] Better presence
 - [ ] send_typing
 
