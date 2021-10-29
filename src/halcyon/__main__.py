@@ -1,4 +1,5 @@
 from .halcyon import *
+import halcyon.restrunner as restrunner
 import argparse
 
 if __name__ == "__main__":
