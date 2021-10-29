@@ -141,7 +141,7 @@ class message(object):
 
                 self.size = rawContent.get("size")
                 self.duration = rawContent.get("duration")#in ms
-                self.thumbnail = self.thumbnail(rawContent.get("thumbnail_info"), thumbnailURL=rawContent.get("thumbnail_url"), thumbnailFile=rawContent.get("thumbnail_file"))
+                self.thumbnail = self.fileThumbnail(rawContent.get("thumbnail_info"), thumbnailURL=rawContent.get("thumbnail_url"), thumbnailFile=rawContent.get("thumbnail_file"))
                 self.mimetype = rawContent.get("mimetype")
                 self.height = rawContent.get("h")
                 self.width = rawContent.get("w")
@@ -150,7 +150,7 @@ class message(object):
             def __bool__(self):
                 return self._hasData
 
-            class thumbnail(object):
+            class fileThumbnail(object):
                 def __init__(self, rawContent=None, thumbnailURL=None, thumbnailFile=None):
                     self.size = None
                     self.mimetype = None

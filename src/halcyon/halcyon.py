@@ -232,6 +232,12 @@ class Client:
         return(self.restrunner.sendEvent(roomID=roomID, eventType="m.room.message", eventPayload=messageContent))
     
 
+    async def send_file(self, roomID, body, replyTo=None):
+        """
+            Placeholder for the file form of the send_message command
+        """
+        pass
+
     async def join_room(self, roomID):
         return(self.restrunner.joinRoom(roomID))
     
