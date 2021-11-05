@@ -20,7 +20,7 @@ class Runner:
             This class contains all the REST methods to talk to the homeserver
 
             @param homeserver String the homeserver to talk to
-            @param user_id String OPTIONAL the  username to use
+            @param user_id String OPTIONAL the username to use
             @param access_token String OPTIONAL this is a valid session token to use
             @param device_id String OPTIONAL this is the device randmo ID 
         '''
@@ -233,6 +233,7 @@ class Runner:
         endpoint = "rooms/" + roomID + "/state"
         return self._get(endpoint=endpoint)
 
+
     def joinRoom(self, roomID, serverToJoinThrough=None, thirdPartySigned=None):
         """
             Join a specific room
@@ -258,6 +259,7 @@ class Runner:
         endpoint = "join/" + roomID
         return self._post(endpoint=endpoint, query=query)
 
+
     def leaveRoom(self, roomID):
         """
             Leave a room. To stop getting info about the room, also call forgetRoom()
@@ -266,6 +268,7 @@ class Runner:
         endpoint = "rooms/" + roomID + "/leave"
         return self._post(endpoint=endpoint)
 
+
     def forgetRoom(self, roomID):
         """
             To stop getting any info about a room. Good practice to call, so the server can delete rooms no one is in.
@@ -273,6 +276,39 @@ class Runner:
 
         endpoint = "rooms/" + roomID + "/forget"
         return self._post(endpoint=endpoint)
+
+
+    def sendTyping(self, roomID, seconds=None, userID=None):
+        """
+            Send typing notifications to the specified room
+
+            @param roomID String the room ID
+            @param seconds int OPTIONAL How many seconds to type for. Set to 0 to stop typing. Defaults to 10 seconds
+            @param userID String OPTIONAL The userID of who is typing. Defaults to current user
+
+            @return dict empty on success
+        """
+
+        if not userID:
+            userID = self.USER_ID
+
+        if not seconds:
+            seconds = 10
+
+        endpoint = "rooms/" + roomID + "/typing/" + userID
+
+        if seconds == 0:
+            payload = {
+                "typing": False
+            }
+        else:
+            payload = {
+                "typing": True,
+                "timeout": seconds * 1000
+            }
+
+        return self._put(endpoint=endpoint, payload=payload)
+
 
     def sync(self, serverSideFilter=None, presence=None, since=None):
         """
@@ -295,6 +331,7 @@ class Runner:
 
         
         return self._get("sync", query=query)
+
 
     def sendEvent(self, roomID, eventType, eventPayload):
         """

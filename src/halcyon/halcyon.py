@@ -232,6 +232,16 @@ class Client:
         return(self.restrunner.sendEvent(roomID=roomID, eventType="m.room.message", eventPayload=messageContent))
     
 
+    async def send_typing(self, roomID, seconds=None):
+        """
+            Send a typing event to a room. Useful when doing a lot of work in the background
+
+            @param roomID String the room id that you want to type in
+            @param seconds int OPTIONAL How many seconds you want to type for. Default 10
+        """
+        self.restrunner.sendTyping(roomID, seconds)
+
+
     async def send_file(self, roomID, body, replyTo=None):
         """
             Placeholder for the file form of the send_message command
@@ -259,6 +269,7 @@ class Client:
             @param fileName filename for the object
         """
         return(self.restrunner.uploadMedia(fileData=fileBuffer, fileName=fileName))
+
 
     def event(self, coro):
         # Validation we don't need to worry about
