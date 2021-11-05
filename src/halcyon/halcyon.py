@@ -131,11 +131,11 @@ class Client:
             return
 
 
-        #handle resp["presence"] events
+        # handle resp["presence"] events
 
-        #handle room events
+        # handle room events
 
-        #handle room messages
+        # handle room messages
 
         if "rooms" in resp:
             #events for rooms you are in
@@ -265,6 +265,10 @@ class Client:
         setattr(self, coro.__name__, coro)
         return coro
 
+    async def on_ready():
+        """on ready stub"""
+        pass
+
     async def on_message(self, message):
         """on message stub"""
         pass
@@ -282,6 +286,7 @@ class Client:
         pass
 
     async def _halcyonMainLoop(self):
+        await self.on_ready()
         while True:
             await self._homeserverSync()
             await asyncio.sleep(self.loopPollInterval)
