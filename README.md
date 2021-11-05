@@ -17,7 +17,8 @@ Ask questions in the matrix chat [#halcyon:blackline.xyz](https://matrix.to/#/#h
     - on_room_leave(roomID)
 - Action hooks
     - send_message(roomID, body, textFormat=None, replyTo=None, isNotice=False)
-    - async def join_room(roomID)
+    - send_typing(roomID, seconds)
+    - join_room(roomID)
     - download_media(mxc)
     - upload_media(fileBuffer, fileName)
 - Room and message objects for incoming events events
@@ -50,6 +51,7 @@ async def on_message(message):
     """If we see a message with the phrase 'give me random', do a reply message with 32 random characters"""
     print(message.event.id)
     if "give me random" in message.content.body:
+        await client.send_typing(message.room.id) # This typing notification will let the user know we've seen their message
         body = "This looks random: " + requests.get("https://random.wesring.com").json()["value"]
         await client.send_message(message.room.id, body=body, replyTo=message.event.id)
 

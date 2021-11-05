@@ -53,6 +53,7 @@ async def on_message(message):
     """If we see a message with the phrase 'give me random', do a reply message with 32 random characters"""
     print(message.event.id)
     if "give me random" in message.content.body:
+        await client.send_typing(message.room.id) # This typing notification will let the user know we've seen their message
         body = "This looks random: " + requests.get("https://random.wesring.com").json()["value"]
         await client.send_message(message.room.id, body=body, replyTo=message.event.id)
 
@@ -117,37 +118,41 @@ if __name__ == '__main__':
 
 ## halcyon function documentation
 + client.send_message
-  + Send a message to a specified room.
-  + @param roomID String the room to send the message to
-  + @param body String the text body to send. defaults to plain text
-  + @param textFormat String OPTIONAL If the string is formatted. Must be "markdown" or "html"
-  + @param replyTo String OPTIONAL The ID to the event you want to reply to
-  + @param isNotice bool OPTIONAL Send the message as a notice. slightly grey on desktop.
-  + @return dict contains 'event_id' of new message
-  + Matrix supported HTML tags:
-  + font, del, h1, h2, h3, h4, h5, h6, blockquote, p, a, ul, ol, sup, sub, 
-  + li, b, i, u, strong, em, strike, code, hr, br, div, table, thead, tbody, 
-  + tr, th, td, caption, pre, span, img.
-  + an example markdown message would be `client.send_message(room.id, "this is __bold__ in a message", textFormat="markdown")`
+    + Send a message to a specified room.
+    + @param roomID String the room to send the message to
+    + @param body String the text body to send. defaults to plain text
+    + @param textFormat String OPTIONAL If the string is formatted. Must be "markdown" or "html"
+    + @param replyTo String OPTIONAL The ID to the event you want to reply to
+    + @param isNotice bool OPTIONAL Send the message as a notice. slightly grey on desktop.
+    + @return dict contains 'event_id' of new message
+    + Matrix supported HTML tags:
+    + font, del, h1, h2, h3, h4, h5, h6, blockquote, p, a, ul, ol, sup, sub, 
+    + li, b, i, u, strong, em, strike, code, hr, br, div, table, thead, tbody, 
+    + tr, th, td, caption, pre, span, img.
+    + an example markdown message would be `client.send_message(room.id, "this is __bold__ in a message", textFormat="markdown")`
++ client.send_typing
+    + This typing notification will let the user know we've seen their message
+    + @param roomID String the room id that you want to type in
+    + @param seconds int OPTIONAL How many seconds you want to type for. Default 10
 
 
 ## halcyon event handlers
 + async def on_ready():
-  + This is called after login, right before we start handling messages. Good for telling you your bot is online, or to configure things  
+    + This is called after login, right before we start handling messages. Good for telling you your bot is online, or to configure things  
 + async def on_message(message):
-  + This is called for each message received, including messages with attachments
+    + This is called for each message received, including messages with attachments
 + async def on_message_edit(message):
-  + This is called when a message is edited
+    + This is called when a message is edited
 + async def on_room_invite(room):
-  + This is called when you are invited to a room
+    + This is called when you are invited to a room
 + async def on_room_leave(roomID):
-  + This is called when you leave a room (or are kicked)
+    + This is called when you leave a room (or are kicked)
 
 
 ## halcyon configuration
 + client.run(halcyonToken=None, userID=None, password=None, homeserver=None, loopPollInterval=None)
-  + You only need to pass in the halcyonToken. If you would like to use password login without a token, you need the us/pw/hs combo. 
-  + loopPollInterval is time in seconds between each poll for more matrix messages. Default is 7 seconds.
+    + You only need to pass in the halcyonToken. If you would like to use password login without a token, you need the us/pw/hs combo. 
+    + loopPollInterval is time in seconds between each poll for more matrix messages. Default is 7 seconds.
 
 
 ## Hot tip
