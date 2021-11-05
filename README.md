@@ -6,20 +6,22 @@ Encryption is on the roadmap, and with the goal of being transparent to the user
 Ask questions in the matrix chat [#halcyon:blackline.xyz](https://matrix.to/#/#halcyon:blackline.xyz) or in GitHub issues.
 
 ## Current features
-- [x] A nice CLI tool to generate Halcyon tokens
-- [x] Login with token or username/password
-- [x] Fetch for new messages every x seconds using await
-- [x] Event hooks for
-    - [x] on_ready()
-    - [x] on_message(message)
-    - [x] on_message_edit(message)
-    - [x] on_room_invite(room)
-    - [x] on_room_leave(roomID)
-- [x] Action hooks
-    - [x] send_message(roomID, body, textFormat=None, replyTo=None, isNotice=False)
-    - [x] async def join_room(roomID)
-- [x] Room and message objects for incoming events events
-- [x] Basic documentation (Check [usage.md](./usage.md))
+- A nice CLI tool to generate Halcyon tokens
+- Login with token or username/password
+- Fetch for new messages every x seconds using await
+- Event hooks for
+    - on_ready()
+    - on_message(message)
+    - on_message_edit(message)
+    - on_room_invite(room)
+    - on_room_leave(roomID)
+- Action hooks
+    - send_message(roomID, body, textFormat=None, replyTo=None, isNotice=False)
+    - async def join_room(roomID)
+    - download_media(mxc)
+    - upload_media(fileBuffer, fileName)
+- Room and message objects for incoming events events
+- Basic documentation (Check [usage.md](./usage.md))
 
 ## Getting started
 1. Create a matrix account for the bot
