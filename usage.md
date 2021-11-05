@@ -57,6 +57,10 @@ async def on_message(message):
         await client.send_message(message.room.id, body=body, replyTo=message.event.id)
 
 
+@client.event
+async def on_ready():
+    print("Online!")
+
 if __name__ == '__main__':
     client.run(halcyonToken="eyJ0eXAiO...")
 ```
@@ -64,7 +68,7 @@ if __name__ == '__main__':
 ## Example file bot
 This bot will auto join invited rooms. If it sees a message of type image, it will download the image into the lastImage var. When it sees the text "dump last file", it will upload the file to your homeserver under a new mxc URL, and send a message with that mxc url.
 
-The following are the recognised message types:
+The following are the recognized message types:
 + TEXT
 + EMOTE
 + NOTICE
@@ -112,25 +116,33 @@ if __name__ == '__main__':
 ```
 
 ## halcyon function documentation
-client.send_message
-  Send a message to a specified room.
++ client.send_message
+  + Send a message to a specified room.
+  + @param roomID String the room to send the message to
+  + @param body String the text body to send. defaults to plain text
+  + @param textFormat String OPTIONAL If the string is formatted. Must be "markdown" or "html"
+  + @param replyTo String OPTIONAL The ID to the event you want to reply to
+  + @param isNotice bool OPTIONAL Send the message as a notice. slightly grey on desktop.
+  + @return dict contains 'event_id' of new message
+  + Matrix supported HTML tags:
+  + font, del, h1, h2, h3, h4, h5, h6, blockquote, p, a, ul, ol, sup, sub, 
+  + li, b, i, u, strong, em, strike, code, hr, br, div, table, thead, tbody, 
+  + tr, th, td, caption, pre, span, img.
+  + an example markdown message would be `client.send_message(room.id, "this is __bold__ in a message", textFormat="markdown")`
 
-  @param roomID String the room to send the message to
-  @param body String the text body to send. defaults to plain text
-  @param textFormat String OPTIONAL If the string is formatted. Must be "markdown" or "html"
-  @param replyTo String OPTIONAL The ID to the event you want to reply to
-  @param isNotice bool OPTIONAL Send the message as a notice. slightly grey on desktop.
 
-  @return dict contains 'event_id' of new message
-
-  Matrix supported HTML tags:
-  font, del, h1, h2, h3, h4, h5, h6, blockquote, p, a, ul, ol, sup, sub, 
-  li, b, i, u, strong, em, strike, code, hr, br, div, table, thead, tbody, 
-  tr, th, td, caption, pre, span, img.
-
-  an example markdown message would be `client.send_message(room.id, "this is __bold__ in a message", textFormat="markdown")`
-
+## halcyon event handlers
++ async def on_ready():
+  + This is called after login, right before we start handling messages. Good for telling you your bot is online, or to configure things  
++ async def on_message(message):
+  + This is called for each message received, including messages with attachments
++ async def on_message_edit(message):
+  + This is called when a message is edited
++ async def on_room_invite(room):
+  + This is called when you are invited to a room
++ async def on_room_leave(roomID):
+  + This is called when you leave a room (or are kicked)
 
 ## Hot tip
 
-you can use somthing like `message._raw` or `message.content._raw` to see the raw message json
+you can use something like `message._raw` or `message.content._raw` to see the raw message json

@@ -51,6 +51,10 @@ async def on_message(message):
         await client.send_message(message.room.id, body=body, replyTo=message.event.id)
 
 
+@client.event
+async def on_ready():
+    print("Online!")
+
 if __name__ == '__main__':
     client.run(halcyonToken="eyJ0eXAiO...")
 ```

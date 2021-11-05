@@ -27,16 +27,17 @@ Type:
 - [x] Can join rooms
 - [x] simple user token
 - [x] client.send_message
-- [ ] documentation
+- [x] documentation
 - [x] GitHub whl builder
 
 ## RC 2
-- [ ] Bot on_ready
+- [x] Bot on_ready
 - [ ] Room cache (dict of room obj to build off of)
 - [x] Media REST services
 - [x] Send and receive Media
 - [ ] Better presence
 - [ ] send_typing
+- [ ] better documentation
 
 ## Goals
 
