@@ -37,7 +37,7 @@ class Runner:
         if homeserver:
             self.HOMESERVER = self._wellknownLookup(homeserver)["m.homeserver"]["base_url"]
 
-    def _request(self, method, endpoint, basepath=None, query=None, payload=None, returnRawContent=None, fileData=None):
+    def _request(self, method, endpoint, basepath=None, query=None, payload=None, returnRawContent=None, fileData=None, retryCount=1):
         """
         The request method
 
@@ -46,6 +46,9 @@ class Runner:
         @param basepath enum OPTIONAL The basepath for the request (defaults to client)
         @param query Dict OPTIONAL url query
         @param payload Dict/json OPTIONAL The json payload
+        @param returnRawContent OBJ OPTIONAL Used to return the content instead of parsing to json first
+        @param fileData OBJ OPTIONAL data payload to send
+        @param retryCount int OPTIONAL downcount to retry the request until failure
         """
 
         if not basepath:
@@ -58,14 +61,23 @@ class Runner:
             "Content-Type" : "application/json"
         }
 
-        #print(url)
-        #print(str(headers))
-        resp = self.SESSION.request(method, url, json=payload, headers=headers, params=query, data=fileData)
+        try:
+            resp = self.SESSION.request(method, url, json=payload, headers=headers, params=query, data=fileData)
+            resp.raise_for_status()
+        except:
+            if retryCount > 0:
+                retryCount = retryCount - 1
+                # Adding backoff code here could be good, if we try retrying more then once
+                return _request(self, method, endpoint, basepath=basepath, query=query, payload=payload, 
+                    returnRawContent=returnRawContent, fileData=fileData, retryCount=retryCount)
 
         if returnRawContent:
             return resp.content
         else:
-            return resp.json()
+            try:
+                return resp.json()
+            except:
+                return {} # on failure just default to nothing
 
     def _get(self, endpoint, basepath=None, query=None, returnRawContent=None):
         """
