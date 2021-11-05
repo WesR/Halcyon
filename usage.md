@@ -143,6 +143,12 @@ if __name__ == '__main__':
 + async def on_room_leave(roomID):
   + This is called when you leave a room (or are kicked)
 
-## Hot tip
 
-you can use something like `message._raw` or `message.content._raw` to see the raw message json
+## halcyon configuration
++ client.run(halcyonToken=None, userID=None, password=None, homeserver=None, loopPollInterval=None)
+  + You only need to pass in the halcyonToken. If you would like to use password login without a token, you need the us/pw/hs combo. 
+  + loopPollInterval is time in seconds between each poll for more matrix messages. Default is 7 seconds.
+
+
+## Hot tip
+You can use something like `message._raw` or `message.content._raw` to see the raw message json

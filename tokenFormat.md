@@ -3,7 +3,7 @@
 Base64url encoded "train-cars". 
 + Cars are separated by periods. 
 + There is always the required engine car that specifies the user/server.
-+ Trailing are the forms of auth, in order of recomended preference.
++ Trailing are the forms of auth, in order of recommended preference.
 + Minimize whitespace characters on encode to save space
 
 ### "Engine" (Required)
@@ -17,7 +17,7 @@ Base64url encoded "train-cars".
 
 ### "valid token" car
 Not to be confused with the `m.login.token` login method. This is a live session on the server
-The expiery is a unix time int. Set to 0 for never expire.
+The expiry is a unix time int. Set to 0 for never expire.
 ```json
 {
     "typ" : "valid-token",

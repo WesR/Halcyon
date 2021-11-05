@@ -1,4 +1,4 @@
-## Halcyon *on and on*
+## Halcyon
 
 Halcyon is a Matrix bot library with the goal of being easy to install and use. The library takes inspiration from discord.py and the Slack libraries.
 Encryption is on the roadmap, and with the goal of being transparent to the user. Check the roadmap in [notes.md](./notes.md), and see information of the token format in [tokenFormat.md](./tokenFormat.md)
@@ -10,15 +10,16 @@ Ask questions in the matrix chat [#halcyon:blackline.xyz](https://matrix.to/#/#h
 - [x] Login with token or username/password
 - [x] Fetch for new messages every x seconds using await
 - [x] Event hooks for
-    - [x] on_message(self, message)
-    - [x] on_message_edit(self, message)
-    - [x] on_room_invite(self, room)
-    - [x] on_room_leave(self, roomID)
+    - [x] on_ready()
+    - [x] on_message(message)
+    - [x] on_message_edit(message)
+    - [x] on_room_invite(room)
+    - [x] on_room_leave(roomID)
 - [x] Action hooks
-    - [x] send_message(self, roomID, body, textFormat=None, replyTo=None, isNotice=False)
-    - [x] async def join_room(self, roomID)
+    - [x] send_message(roomID, body, textFormat=None, replyTo=None, isNotice=False)
+    - [x] async def join_room(roomID)
 - [x] Room and message objects for incoming events events
-- [ ] Documentation
+- [x] Basic documentation (Check [usage.md](./usage.md))
 
 ## Getting started
 1. Create a matrix account for the bot
