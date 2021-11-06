@@ -68,7 +68,7 @@ class Runner:
             if retryCount > 0:
                 retryCount = retryCount - 1
                 # Adding backoff code here could be good, if we try retrying more then once
-                return _request(self, method, endpoint, basepath=basepath, query=query, payload=payload, 
+                return self._request(method, endpoint, basepath=basepath, query=query, payload=payload, 
                     returnRawContent=returnRawContent, fileData=fileData, retryCount=retryCount)
 
         if returnRawContent:
