@@ -35,23 +35,26 @@ Type:
 - [ ] Room cache (dict of room obj to build off of)
 - [x] Media REST services
 - [x] Send and receive Media
-- [ ] set presence/status
-- [ ] get presence/status
+- [x] set presence/status
 - [x] send_typing
-- [ ] better documentation
+- [x] better documentation
 
 ## RC 3
+- [ ] encryption
+- [ ] read/write server datastore
+- [ ] datastore key in token
+- [ ] warn log when token doesn't cant support encryption
+
+## RC 4
+- [ ] user object
+- [ ] get user presence/status
+- [ ] get user image
+- [ ] get user nick
 - [ ] leave room
 - [ ] list rooms
 - [ ] get room permissions
 - [ ] ban user from room
 - [ ] emotes
-
-## RC 4
-- [ ] encryption
-- [ ] read/write server datastore
-- [ ] datastore key in token
-- [ ] warn log when token doesn't cant support encryption
 
 ## Goals
 
