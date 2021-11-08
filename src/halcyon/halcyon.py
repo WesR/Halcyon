@@ -119,6 +119,9 @@ class Client:
     async def _homeserverSync(self):
 
         resp = self.restrunner.sync(since=self.sinceToken)
+        if "next_batch" not in resp:#This should catch bad syncs
+            return
+
         self.sinceToken = resp["next_batch"]
 
         if "device_one_time_keys_count" in resp:
