@@ -35,9 +35,23 @@ Type:
 - [ ] Room cache (dict of room obj to build off of)
 - [x] Media REST services
 - [x] Send and receive Media
-- [ ] Better presence
-- [ ] send_typing
+- [ ] set presence/status
+- [ ] get presence/status
+- [x] send_typing
 - [ ] better documentation
+
+## RC 3
+- [ ] leave room
+- [ ] list rooms
+- [ ] get room permissions
+- [ ] ban user from room
+- [ ] emotes
+
+## RC 4
+- [ ] encryption
+- [ ] read/write server datastore
+- [ ] datastore key in token
+- [ ] warn log when token doesn't cant support encryption
 
 ## Goals
 
