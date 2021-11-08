@@ -1,18 +1,7 @@
 import json, requests, enum, uuid, time
 import logging
 import io
-
-class Basepath(str, enum.Enum):
-    CLIENT = "_matrix/client/r0"
-    CLIENT_UNSTABLE = "_matrix/client/unstable"
-    MEDIA = "_matrix/media/r0"
-    SYNAPSE_ADMIN = "_synapse/admin"
-
-class Presence(str, enum.Enum):
-    #When set to "unavailable", the client is marked as being idle
-    OFFLINE = "offline"
-    ONLINE = "online"
-    UNAVAILABLE = "unavailable"
+from halcyon.enums import *
 
 class Runner:
     def __init__(self, homeserver, user_id=None, access_token=None, device_id=None):

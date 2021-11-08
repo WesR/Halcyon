@@ -61,6 +61,7 @@ async def on_message(message):
 @client.event
 async def on_ready():
     print("Online!")
+    await client.change_presence(statusMessage="indexing /dev/urandom")
 
 if __name__ == '__main__':
     client.run(halcyonToken="eyJ0eXAiO...")
@@ -69,7 +70,7 @@ if __name__ == '__main__':
 ## Example file bot
 This bot will auto join invited rooms. If it sees a message of type image, it will download the image into the lastImage var. When it sees the text "dump last file", it will upload the file to your homeserver under a new mxc URL, and send a message with that mxc url.
 
-The following are the recognized message types:
+The following are the recognized message types. They can be referenced as such `halcyon.msgType.IMAGE`
 + TEXT
 + EMOTE
 + NOTICE
@@ -117,42 +118,46 @@ if __name__ == '__main__':
 ```
 
 ## halcyon function documentation
-+ client.send_message
++ `client.send_message`
     + Send a message to a specified room.
-    + @param roomID String the room to send the message to
-    + @param body String the text body to send. defaults to plain text
-    + @param textFormat String OPTIONAL If the string is formatted. Must be "markdown" or "html"
-    + @param replyTo String OPTIONAL The ID to the event you want to reply to
-    + @param isNotice bool OPTIONAL Send the message as a notice. slightly grey on desktop.
+    + @param `roomID` String the room to send the message to
+    + @param `body` String the text body to send. defaults to plain text
+    + @param `textFormat` String OPTIONAL If the string is formatted. Must be "markdown" or "html"
+    + @param `replyTo` String OPTIONAL The ID to the event you want to reply to
+    + @param `isNotice` bool OPTIONAL Send the message as a notice. slightly grey on desktop.
     + @return dict contains 'event_id' of new message
     + Matrix supported HTML tags:
     + font, del, h1, h2, h3, h4, h5, h6, blockquote, p, a, ul, ol, sup, sub, 
     + li, b, i, u, strong, em, strike, code, hr, br, div, table, thead, tbody, 
     + tr, th, td, caption, pre, span, img.
     + an example markdown message would be `client.send_message(room.id, "this is __bold__ in a message", textFormat="markdown")`
-+ client.send_typing
++ `client.send_typing`
     + This typing notification will let the user know we've seen their message
-    + @param roomID String the room id that you want to type in
-    + @param seconds int OPTIONAL How many seconds you want to type for. Default 10
+    + @param `roomID` String the room id that you want to type in
+    + @param `seconds` int OPTIONAL How many seconds you want to type for. Default 10
++ `client.change_presence`
+    + This function is used to update your presence on the server. Status message support is client specific
+    + @param `presence` enum/string OPTIONAL The presence of the bot user ie `halcyon.Presence.ONLINE` or `halcyon.Presence.UNAVAILABLE` if idle.
+    + @param `statusMessage` String the string to set the current users status to
 
 
 ## halcyon event handlers
-+ async def on_ready():
++ `async def on_ready():`
     + This is called after login, right before we start handling messages. Good for telling you your bot is online, or to configure things  
-+ async def on_message(message):
++ `async def on_message(message):`
     + This is called for each message received, including messages with attachments
-+ async def on_message_edit(message):
++ `async def on_message_edit(message):`
     + This is called when a message is edited
-+ async def on_room_invite(room):
++ `async def on_room_invite(room):`
     + This is called when you are invited to a room
-+ async def on_room_leave(roomID):
++ `async def on_room_leave(roomID):`
     + This is called when you leave a room (or are kicked)
 
 
 ## halcyon configuration
-+ client.run(halcyonToken=None, userID=None, password=None, homeserver=None, loopPollInterval=None)
-    + You only need to pass in the halcyonToken. If you would like to use password login without a token, you need the us/pw/hs combo. 
-    + loopPollInterval is time in seconds between each poll for more matrix messages. Default is 7 seconds.
++ `client.run(halcyonToken=None, userID=None, password=None, homeserver=None, loopPollInterval=None)`
+    + You only need to pass in the `halcyonToken`. If you would like to use password login without a token, you need the us/pw/hs combo. 
+    + `loopPollInterval` is time in seconds between each poll for more matrix messages. Default is 7 seconds.
 
 
 ## Hot tip

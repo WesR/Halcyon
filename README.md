@@ -59,6 +59,7 @@ async def on_message(message):
 @client.event
 async def on_ready():
     print("Online!")
+    await client.change_presence(statusMessage="indexing /dev/urandom")
 
 if __name__ == '__main__':
     client.run(halcyonToken="eyJ0eXAiO...")
