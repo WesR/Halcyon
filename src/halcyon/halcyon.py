@@ -267,8 +267,16 @@ class Client:
         #validation for presence value?
         #halcyon.Status.idle
 
-        self.restrunner.setUserPresence(presence=presence, statusMessage=statusMessage)
+        resp = self.restrunner.setUserPresence(presence=presence, statusMessage=statusMessage)
+        # {'errcode': 'M_NOT_JSON', 'error': 'Content not JSON.'}
+        if 'errcode' in resp:
+            logging.error("Change presence error: " + resp["error"])
     
+
+    #async def get_user_presence(self, userID):
+    #    print(self.restrunner.getUserPresence(userID=userID))
+    # Include this in a user info/lookup function?
+
 
     async def download_media(self, mxc):
         """

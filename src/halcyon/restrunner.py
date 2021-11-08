@@ -223,16 +223,16 @@ class Runner:
         if not presence:
             presence = Presence.ONLINE
 
-        query = {
+        payload = {
             "presence" : presence
         }
 
         if statusMessage:
-            query["status_msg"] = statusMessage
+            payload["status_msg"] = statusMessage
 
         endpoint = "presence/" + self.USER_ID + "/status"
 
-        return self._put(endpoint=endpoint,query=query)
+        return self._put(endpoint=endpoint,payload=payload)
 
     def joinedRooms(self):
         """
