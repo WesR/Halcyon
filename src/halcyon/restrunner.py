@@ -173,6 +173,7 @@ class Runner:
             logging.info("Revoking current access token")
             return self._post("logout")
 
+
     def whoami(self):
         '''
         A simple check to see who you are logged in as. Good for ensuring auth
@@ -181,6 +182,57 @@ class Runner:
         '''
         return self._get("account/whoami")
 
+
+    def getUserPresence(self, userID=None):
+        """
+        Get the specified users current status / presence info
+
+        @param userID String OPTIONAL the full @username:server.com address to fetch the status of
+
+        @return dict presence object
+        """
+        """
+        {
+            "content": {
+                "avatar_url": "mxc://localhost:wefuiwegh8742w",
+                "currently_active": false,
+                "last_active_ago": 2478593,
+                "presence": "online",
+                "status_msg": "Making cupcakes"
+            },
+            "sender": "@example:localhost",
+            "type": "m.presence"
+        }
+        """
+        if not userID:
+            userID = self.USER_ID
+
+        endpoint = "presence/" + userID + "/status"
+
+        return self._get(endpoint=endpoint)
+
+
+    def setUserPresence(self, presence=None, statusMessage=None):
+        """
+        Set the current users presence/status info. You can only set your own
+
+        @param presence enum/string OPTIONAL The presence of the bot user
+        @param statusMessage String the string to set the current users status to
+        """
+
+        if not presence:
+            presence = Presence.ONLINE
+
+        query = {
+            "presence" : presence
+        }
+
+        if statusMessage:
+            query["status_msg"] = statusMessage
+
+        endpoint = "presence/" + self.USER_ID + "/status"
+
+        return self._put(endpoint=endpoint,query=query)
 
     def joinedRooms(self):
         """

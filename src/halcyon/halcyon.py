@@ -248,9 +248,25 @@ class Client:
         """
         pass
 
+
     async def join_room(self, roomID):
         return(self.restrunner.joinRoom(roomID))
+
+
+    async def change_presence(self, presence=None, statusMessage=None):
+        """
+            Set the bot presence and status message
+
+            @param presence enum/string OPTIONAL The presence of the bot user
+            @param statusMessage String the string to set the current users status to
+        """
+
+        #validation for presence value?
+        #halcyon.Status.idle
+
+        self.restrunner.setUserPresence(presence=presence, statusMessage=statusMessage)
     
+
     async def download_media(self, mxc):
         """
             Returns a BytesIO file fetched from an MXC
