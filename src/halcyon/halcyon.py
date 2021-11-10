@@ -337,8 +337,11 @@ class Client:
         #login
         self._init(halcyonToken, userID, password, homeserver)
         loop = self.loop
-        loop.add_signal_handler(2, lambda: self._destruction())#SIGINT
-        loop.add_signal_handler(15, lambda: self._destruction())#SIGTERM
+        try:
+            loop.add_signal_handler(2, lambda: self._destruction())#SIGINT
+            loop.add_signal_handler(15, lambda: self._destruction())#SIGTERM
+        except NotImplementedError:
+            pass
 
         try:
             loop.create_task(self._halcyonMainLoop())
