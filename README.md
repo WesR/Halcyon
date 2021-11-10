@@ -16,8 +16,9 @@ Ask questions in the matrix chat [#halcyon:blackline.xyz](https://matrix.to/#/#h
     - on_room_invite(room)
     - on_room_leave(roomID)
 - Action hooks
-    - send_message(roomID, body, textFormat=None, replyTo=None, isNotice=False)
+    - send_message(roomID, body, textFormat, replyTo, isNotice)
     - send_typing(roomID, seconds)
+    - change_presence(presence, statusMessage)
     - join_room(roomID)
     - download_media(mxc)
     - upload_media(fileBuffer, fileName)
