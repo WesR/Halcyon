@@ -21,3 +21,11 @@ class Presence(str, enum.Enum):
     OFFLINE = "offline"
     ONLINE = "online"
     UNAVAILABLE = "unavailable"
+
+
+class memberStatus(str, enum.Enum):
+    INVITE = "invite"
+    JOIN = "join"
+    LEAVE = "leave"
+    BAN = "ban"
+    KNOCK = "knock"

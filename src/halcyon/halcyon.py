@@ -98,6 +98,15 @@ class Client:
         exit(1)
 
 
+    def _roomcacheinit(self):
+        """
+            Build a cache of room info that can be linked into incoming messages
+        """
+        currentRooms = self.restrunner.joinedRooms()
+        newRoom = room(self.restrunner.getRoomState(currentRooms[1]), currentRooms[1])
+        print(newRoom.members)
+
+
     def _destruction(self):
         if self.logoutOnDeath:
             logging.info("Logging out user")
@@ -336,6 +345,7 @@ class Client:
 
         #login
         self._init(halcyonToken, userID, password, homeserver)
+        self._roomcacheinit()
         loop = self.loop
         try:
             loop.add_signal_handler(2, lambda: self._destruction())#SIGINT

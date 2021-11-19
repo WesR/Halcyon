@@ -53,6 +53,9 @@ class room(object):
         #m.room.avatar
         self.avatarURL = None
 
+        #m.room.member
+        self.members = []
+
         if rawEvents:
             for event in rawEvents:
                 if event["type"] == "m.room.create":
@@ -80,6 +83,18 @@ class room(object):
 
                 if event["type"] == "m.room.avatar":
                     self.avatarURL = event["content"].get("url")
+
+                if event["type"] == "m.room.member":
+                    """
+
+
+                      room.members (just joined) ??
+                      room.members.invited
+                      room.members.banned
+                      room.members.leave
+                    """
+                    if event["content"]["membership"] == "join":
+                        self.members.append(event["user_id"])
 
     def __bool__(self):
         return self._hasData

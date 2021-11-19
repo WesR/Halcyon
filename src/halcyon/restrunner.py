@@ -266,12 +266,24 @@ class Runner:
         endpoint = "directory/list/room/" + roomID
         return self._get(endpoint=endpoint)
 
+
     def getRoomState(self, roomID):
         """
             Get all info on a room. Name, alias, joins, leaves...
+
+            @param roomID String
         """
 
         endpoint = "rooms/" + roomID + "/state"
+        return self._get(endpoint=endpoint)
+
+    def getRoomMembers(self, roomID):
+        """
+            Get all member join/leaves
+
+            @param roomID String
+        """
+        endpoint = "rooms/" + roomID + "/members"
         return self._get(endpoint=endpoint)
 
 
