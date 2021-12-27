@@ -11,6 +11,23 @@ Type:
 + m.reaction
 + m.room.member
 
+room cache
+1. on boot fetch list of rooms
+2. Check full room events
+3. save cache in halcyon so we can add the info to every message
+4. function to read from cache
+5. function to build cache for room
+6. cache for joined users
+struct:
+{
+    cache-init-age: datetime()
+    rooms: {
+        id : {cache},
+        id : {cache}
+    }
+}
+
+
 
 ## Outline
 

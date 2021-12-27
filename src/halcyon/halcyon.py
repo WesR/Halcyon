@@ -1,4 +1,4 @@
-import enum, json, requests, time, logging, base64
+import enum, json, requests, logging, base64
 import markdown, re
 import asyncio
 import time
@@ -26,6 +26,8 @@ class Client:
         self.ignoreFirstSync = ignoreFirstSync
         self.firstSync = True
         self.revokeSessionTokenOnExit = False
+
+        self.roomCache = dict()
 
     def _encodeTokenDict(self, tokenDict):
         """
@@ -98,14 +100,25 @@ class Client:
         exit(1)
 
 
-    def _roomcacheinit(self):
+    def _roomcacheinit(self, cachePublicRooms=False):
         """
             Build a cache of room info that can be linked into incoming messages
         """
-        currentRooms = self.restrunner.joinedRooms()
-        newRoom = room(self.restrunner.getRoomState(currentRooms[1]), currentRooms[1])
-        print(newRoom.members)
+        self.roomCache["cache_init_time"] = time.time_ns()#nanoseconds since epoch
+        self.roomCache["rooms"] = dict()
 
+        joined_rooms = self.restrunner.joinedRooms()
+        for roomID in joined_rooms:
+            self.roomCache["rooms"][roomID] = room(self.restrunner.getRoomState(roomID), roomID)
+        
+        #print(self.roomCache["cache_init_time"])
+        #print(self.roomCache["rooms"])
+
+    def _addRoomToCache(self):
+        """
+            Add a room to the room cache
+        """
+        pass
 
     def _destruction(self):
         if self.logoutOnDeath:
@@ -312,7 +325,7 @@ class Client:
         setattr(self, coro.__name__, coro)
         return coro
 
-    async def on_ready():
+    async def on_ready(self):
         """on ready stub"""
         pass
 
