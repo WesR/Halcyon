@@ -10,10 +10,10 @@
         m.room.avatar
         m.room.canonical_alias
         m.room.aliases
+        m.room.power_levels
 
     TODO:
         m.room.guest_access
-        m.room.power_levels
         m.room.related_groups
         m.room.server_acl
         m.room.member
@@ -56,6 +56,10 @@ class room(object):
         #m.room.member
         self.members = []
 
+        #m.room.power_levels
+        self.permissions = None
+
+
         if rawEvents:
             for event in rawEvents:
                 if event["type"] == "m.room.create":
@@ -86,8 +90,6 @@ class room(object):
 
                 if event["type"] == "m.room.member":
                     """
-
-
                       room.members (just joined) ??
                       room.members.invited
                       room.members.banned
@@ -95,6 +97,9 @@ class room(object):
                     """
                     if event["content"]["membership"] == "join":
                         self.members.append(event["user_id"])
+
+                if event["type"] == "m.room.power_levels":
+                    self.predecessor = self.roomPermissions(event["content"])
 
     def __bool__(self):
         return self._hasData
@@ -122,6 +127,38 @@ class room(object):
 
         def __bool__(self):
             return self._hasData
+
+
+    class roomPermissions(object):
+        def __init__(self, rawContent=None):
+
+            self.administrator_value = 100
+
+            #synthetic
+            self.administrators = {k:v for (k,v) in rawContent["users"].items() if v==100}
+            self.moderators
+
+
+            self._raw = rawContent
+            self._hasData = False
+
+            if rawContent:
+                self._parseRawContent(rawContent)
+
+
+        def _parseRawContent(self, rawContent):
+            """
+                "event_id": "$something:example.org",
+                "room_id": "!oldroom:example.org"
+            """
+
+            self.event = idReturn(rawContent.get("event_id"))
+            self.room = idReturn(rawContent.get("room_id"))
+            self._hasData = True
+
+        def __bool__(self):
+            return self._hasData
+
 
     class idReturn(object):
         def __init__(self, rawID=None):

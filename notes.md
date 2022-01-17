@@ -55,6 +55,7 @@ struct:
 - [x] set presence/status
 - [x] send_typing
 - [x] better documentation
+- [ ] Improve /sync calls
 
 ## RC 3
 - [ ] encryption
