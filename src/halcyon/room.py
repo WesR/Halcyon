@@ -6,18 +6,18 @@
         m.room.join_rules
         m.room.name
         m.room.topic
+        m.room.related_groups
+        m.room.guest_access
+        m.room.history_visibility
     Partially:
         m.room.avatar
         m.room.canonical_alias
         m.room.aliases
         m.room.power_levels (could probably be fleshed out)
+        m.room.member
 
     TODO:
-        m.room.guest_access
-        m.room.related_groups
         m.room.server_acl
-        m.room.member
-        m.room.history_visibility
 
         m.room.encryption
         m.room.avatar (ImageInfo and ThumbnailInfo support)
@@ -59,6 +59,14 @@ class room(object):
         #m.room.power_levels
         self.permissions = None
 
+        #m.room.related_groups
+        self.relatedGroups = []
+
+        #m.room.guest_access
+        self.guestAccess = False
+
+        #m.room.history_visibility
+        self.historyVisibility = None
 
         if rawEvents:
             for event in rawEvents:
@@ -88,6 +96,16 @@ class room(object):
                 if event["type"] == "m.room.avatar":
                     self.avatarURL = event["content"].get("url")
 
+                if event["type"] == "m.room.related_groups":
+                    self.relatedGroups += event["content"].get("groups", [])
+
+                if event["type"] == "m.room.guest_access":
+                    #This defaults to false, and is only true if can_join is explictly set
+                    self.guestAccess = (event["content"].get("guest_access") == "can_join")
+
+                if event["type"] == "m.room.history_visibility":
+                    self.historyVisibility = event["content"].get("history_visibility")
+
                 if event["type"] == "m.room.member":
                     """
                       room.members (just joined) ??
@@ -100,6 +118,7 @@ class room(object):
 
                 if event["type"] == "m.room.power_levels":
                     self.permissions = self.roomPermissions(event["content"])
+
 
     def __bool__(self):
         return self._hasData
