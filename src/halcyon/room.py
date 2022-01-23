@@ -172,10 +172,10 @@ class room(object):
             self.users = None
 
             #actions
-            self.invite = None
-            self.redact = None
-            self.ban = None
-            self.kick = None
+            self.invite_value = None
+            self.redact_value = None
+            self.ban_value = None
+            self.kick_value = None
 
             self._raw = rawContent
             self._hasData = False
@@ -216,10 +216,10 @@ class room(object):
             self.users = rawContent.get("users")#everyone
 
             #actions
-            self.invite = rawContent.get("invite")
-            self.redact = rawContent.get("redact")
-            self.ban = rawContent.get("ban")
-            self.kick = rawContent.get("kick")
+            self.invite_value = rawContent.get("invite")
+            self.redact_value = rawContent.get("redact")
+            self.ban_value = rawContent.get("ban")
+            self.kick_value = rawContent.get("kick")
 
             self._hasData = True
 

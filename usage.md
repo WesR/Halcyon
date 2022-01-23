@@ -153,6 +153,46 @@ if __name__ == '__main__':
 + `async def on_room_leave(roomID):`
     + This is called when you leave a room (or are kicked)
 
+## halcyon room object
+Below are all of the current values stored in the room objects, inside an example usage of on_message(message)
+```python
+@client.event
+async def on_message(message):
+    message.room.creator #userID of who made the room 
+    message.room.version #room version
+    message.room.federated #is this room allowed to federate to other servers?
+    message.room.predecessor.room #the roomID before this (defaults None if there isnt one)
+    message.room.predecessor.event #the event where the room updated
+    message.room.joinRule #the joinrule for the room
+    message.room.name #name of the room
+    message.room.topic #room topic
+    message.room.alias.canonical #main, canonical, address
+    message.room.alias.alt #alternative addresses
+    message.room.avatar.url #the mxc:// url of the avatar
+    message.room.members #all the room members that have joined
+
+    message.room.permissions.administrators #a list of users who are considered administrators
+    message.room.permissions.moderators #a list of users who are considered moderators
+    message.room.permissions.users #all the users with non 0 power levels
+
+    message.room.permissions.m_event_values #a dict() of m.events and the value required to send them
+    message.room.permissions.administrator_value #the permission value for administrators (always 100)
+    message.room.permissions.moderator_value #the permission value for administrators (always 50)
+    message.room.permissions.user_value #the permission value for administrators (0)
+    message.room.permissions.events_value #The level required to send specific event types
+    message.room.permissions.state_value #The level required to send state events
+    message.room.permissions.invite_value #The level required to invite a user
+    message.room.permissions.redact_value #The level required to redact other users comments 
+    message.room.permissions.ban_value #The level required to ban a user
+    message.room.permissions.kick_value #The level required to kick a user
+    
+    message.room.relatedGroups #a list of related groups for this room (ie groups)
+    message.room.guestAccess #T/F do we allow guest access?
+    message.room.historyVisibility #["invited", "joined", "shared", "world_readable"] 
+    message.room.acl #if any server ACL has been specified for this room
+    message.room.encryption #information on the rooms encryption (if any)
+```
+
 
 ## halcyon configuration
 + `client.run(halcyonToken=None, userID=None, password=None, homeserver=None, loopPollInterval=None)`
