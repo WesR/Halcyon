@@ -169,7 +169,9 @@ async def on_message(message):
     message.room.alias.canonical #main, canonical, address
     message.room.alias.alt #alternative addresses
     message.room.avatar.url #the mxc:// url of the avatar
-    message.room.members #all the room members that have joined
+    message.room.members #list, all the room members that have joined
+    message.room.left #list, all of the users who have left
+    message.room.invited #list, all of the users who have been invited but not joined
 
     message.room.permissions.administrators #a list of users who are considered administrators
     message.room.permissions.moderators #a list of users who are considered moderators
@@ -185,7 +187,7 @@ async def on_message(message):
     message.room.permissions.redact_value #The level required to redact other users comments 
     message.room.permissions.ban_value #The level required to ban a user
     message.room.permissions.kick_value #The level required to kick a user
-    
+
     message.room.relatedGroups #a list of related groups for this room (ie groups)
     message.room.guestAccess #T/F do we allow guest access?
     message.room.historyVisibility #["invited", "joined", "shared", "world_readable"] 

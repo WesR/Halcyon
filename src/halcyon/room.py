@@ -51,6 +51,8 @@ class room(object):
 
         #m.room.member
         self.members = []
+        self.left = []
+        self.invited = []
 
         #m.room.power_levels
         self.permissions = None
@@ -113,10 +115,17 @@ class room(object):
                       room.members (just joined) ??
                       room.members.invited
                       room.members.banned
-                      room.members.leave
+                      room.members.left
                     """
                     if event["content"]["membership"] == "join":
                         self.members.append(event["user_id"])
+
+                    if event["content"]["membership"] == "leave":
+                        self.left.append(event["user_id"])
+
+                    if event["content"]["membership"] == "invited":
+                        self.invited.append(event["state_key"])
+
 
                 if event["type"] == "m.room.power_levels":
                     self.permissions = self.roomPermissions(event["content"])
