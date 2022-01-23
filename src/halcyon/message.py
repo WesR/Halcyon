@@ -15,10 +15,10 @@ This is the message object that will be created for each message
 """
 
 class message(object):
-    def __init__(self, rawMessage=None, roomID=None):
+    def __init__(self, rawMessage=None, room=None):
         self._raw = rawMessage
         self._hasData = False
-        self.room = self.idReturn(roomID)#later we flesh these out to return cached room info
+        self.room = room#room object
 
         self.type = None
         self.sender = None

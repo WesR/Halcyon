@@ -10,6 +10,7 @@
         m.room.guest_access
         m.room.history_visibility
         m.room.server_acl
+        m.room.encryption
     Partially:
         m.room.avatar
         m.room.canonical_alias
@@ -17,12 +18,8 @@
         m.room.power_levels (could probably be fleshed out)
         m.room.member
 
-    TODO:
-        m.room.encryption
-        m.room.avatar (ImageInfo and ThumbnailInfo support)
-
-
-    Theory: have a room full and room minimal, because you don't normally need to waste the time parsing all this
+    For encrypted events:
+        m.room.encrypted
 """
 
 class room(object):
@@ -47,10 +44,10 @@ class room(object):
         self.topic = None
 
         #m.room.aliases and m.room.canonical_alias
-        self.aliases = []
+        self.alias = None
 
         #m.room.avatar
-        self.avatarURL = None
+        self.avatar = None
 
         #m.room.member
         self.members = []
@@ -70,6 +67,9 @@ class room(object):
         #m.room.server_acl
         self.acl = None
 
+        #m.room.encryption
+        self.encryption = None
+
         if rawEvents:
             for event in rawEvents:
                 if event["type"] == "m.room.create":
@@ -88,18 +88,18 @@ class room(object):
                     self.topic = event["content"].get("topic")
                     #In the future this could be cleaned up so we keep a list of old topics and their replaces
 
-                if event["type"] == "m.room.aliases":
-                    self.aliases += event["content"].get("aliases", [])
+                #These should be EOL
+                #if event["type"] == "m.room.aliases":
+                #    self.aliases.extend(event["content"].get("aliases", []))
 
                 if event["type"] == "m.room.canonical_alias":
-                    self.aliases += event["content"].get("alias", [])
-                    self.aliases += event["content"].get("alt_aliases", [])
+                    self.alias = self.room_alias(event["content"])
 
                 if event["type"] == "m.room.avatar":
-                    self.avatarURL = event["content"].get("url")
+                    self.avatar = self.room_avatar(event["content"])
 
                 if event["type"] == "m.room.related_groups":
-                    self.relatedGroups += event["content"].get("groups", [])
+                    self.relatedGroups.extend(event["content"].get("groups", []))
 
                 if event["type"] == "m.room.guest_access":
                     #This defaults to false, and is only true if can_join is explictly set
@@ -122,7 +122,10 @@ class room(object):
                     self.permissions = self.roomPermissions(event["content"])
 
                 if event["type"] == "m.room.server_acl":
-                    self.acl = self.room_server_acl(event["content"])                    
+                    self.acl = self.room_server_acl(event["content"])
+
+                if event["type"] == "m.room.encryption":
+                    self.encryption = self.room_encryption(event["content"])
 
 
     def __bool__(self):
@@ -163,13 +166,13 @@ class room(object):
             self.state_value = None
             self.m_event_values = None
 
-            #synthetic = None
-            self = None
+            #synthetic
+            self.administrators = None
             self.moderators = None
             self.users = None
 
-            #actions = None
-            self = None
+            #actions
+            self.invite = None
             self.redact = None
             self.ban = None
             self.kick = None
@@ -248,6 +251,86 @@ class room(object):
 
         def __bool__(self):
             return self._hasData
+
+
+    class room_encryption(object):
+        def __init__(self, rawContent=None):
+            self.algorithm = None
+            self.rotation_period_ms = None
+            self.rotation_period_msgs = None
+            self._raw = rawContent
+            self._hasData = False
+
+            if rawContent:
+                self._parseRawContent(rawContent)
+
+
+        def _parseRawContent(self, rawContent):
+            """
+                "algorithm": "m.megolm.v1.aes-sha2"
+                "rotation_period_ms": 604800000,
+                "rotation_period_msgs": 100
+            """
+
+            self.algorithm = rawContent.get("algorithm")
+            self.rotation_period_ms = rawContent.get("rotation_period_ms")
+            self.rotation_period_msgs = rawContent.get("rotation_period_msgs")
+            self._hasData = True
+
+        def __bool__(self):
+            return self._hasData
+
+
+    class room_avatar(object):
+        def __init__(self, rawContent=None):
+            self.url = None
+            self._raw = rawContent
+            self._hasData = False
+
+            if rawContent:
+                self._parseRawContent(rawContent)
+
+
+        def _parseRawContent(self, rawContent):
+            """
+                https://matrix.org/docs/spec/client_server/r0.6.1#m-room-avatar
+            """
+
+            self.url = rawContent.get("url")
+            self._hasData = True
+
+        def __bool__(self):
+            return self._hasData
+
+
+    class room_alias(object):
+        def __init__(self, rawContent=None):
+            self.canonical = None
+            self.alt = []
+
+            self._raw = rawContent
+            self._hasData = False
+
+            if rawContent:
+                self._parseRawContent(rawContent)
+
+
+        def _parseRawContent(self, rawContent):
+            """
+                https://matrix.org/docs/spec/client_server/r0.6.1#m-room-canonical-alias
+            """
+            self.canonical = rawContent.get("alias")
+            self.alt.extend(rawContent.get("alt_aliases", []))
+            self._hasData = True
+
+        def __bool__(self):
+            return self._hasData
+
+        #def __list__(self):
+        #    if self.canonical:
+        #        return self.alt.append(self.canonical)
+        #    else:
+        #        return self.alt
 
 
     class idReturn(object):

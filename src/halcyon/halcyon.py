@@ -110,15 +110,29 @@ class Client:
         joined_rooms = self.restrunner.joinedRooms()
         for roomID in joined_rooms:
             self.roomCache["rooms"][roomID] = room(self.restrunner.getRoomState(roomID), roomID)
-        
-        #print(self.roomCache["cache_init_time"])
-        #print(self.roomCache["rooms"])
 
-    def _addRoomToCache(self):
+
+    def _addRoomToCache(self, roomID):
         """
-            Add a room to the room cache
+            Add a room to the room cache, can be used to refresh an old room cache
         """
-        pass
+        self.roomCache["rooms"][roomID] = room(self.restrunner.getRoomState(roomID), roomID)
+
+    def _getRoom(self, roomID):
+        """
+            retrive a room from the roomcache, cacheing if it is not already in the cache
+            @param roomID String the room ID
+        """
+        if roomID in self.roomCache["rooms"]:
+            return self.roomCache["rooms"][roomID]
+        else:
+            self._addRoomToCache(self, roomID)
+
+            #if it doesn't populate, return an empty room
+            if roomID in self.roomCache["rooms"]:
+                return self.roomCache["rooms"][roomID]
+            else:
+                return room()
 
     def _destruction(self):
         if self.logoutOnDeath:
@@ -127,6 +141,7 @@ class Client:
         
         logging.info("Stopping main event loop")
         self.loop.stop()
+
 
     def _logoutUser(self, revokeAllTokens=False):
         """
@@ -171,7 +186,7 @@ class Client:
                             for event in resp["rooms"]["join"][roomID]["timeline"]["events"]:
                                 if event["type"] == "m.room.message":
                                     #support asyncio.create_task( ?
-                                    newMsg = message(event, roomID)
+                                    newMsg = message(event, self._getRoom(roomID))
                                     if newMsg.edit:
                                         await self.on_message_edit(newMsg)
                                     else:
