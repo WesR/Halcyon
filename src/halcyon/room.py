@@ -9,6 +9,7 @@
         m.room.related_groups
         m.room.guest_access
         m.room.history_visibility
+        m.room.server_acl
     Partially:
         m.room.avatar
         m.room.canonical_alias
@@ -17,8 +18,6 @@
         m.room.member
 
     TODO:
-        m.room.server_acl
-
         m.room.encryption
         m.room.avatar (ImageInfo and ThumbnailInfo support)
 
@@ -67,6 +66,9 @@ class room(object):
 
         #m.room.history_visibility
         self.historyVisibility = None
+
+        #m.room.server_acl
+        self.acl = None
 
         if rawEvents:
             for event in rawEvents:
@@ -119,14 +121,17 @@ class room(object):
                 if event["type"] == "m.room.power_levels":
                     self.permissions = self.roomPermissions(event["content"])
 
+                if event["type"] == "m.room.server_acl":
+                    self.acl = self.room_server_acl(event["content"])                    
+
 
     def __bool__(self):
         return self._hasData
 
     class roomPredecessor(object):
         def __init__(self, rawContent=None):
-            self.eventID = None
-            self.roomID = None
+            self.event = None
+            self.room = None
             self._raw = rawContent
             self._hasData = False
 
@@ -168,12 +173,6 @@ class room(object):
             self.redact = None
             self.ban = None
             self.kick = None
-
-            #message specific things
-            self.sender = None
-            self.age = None
-            self.event = None
-            self.room = None
 
             self._raw = rawContent
             self._hasData = False
@@ -219,11 +218,32 @@ class room(object):
             self.ban = rawContent.get("ban")
             self.kick = rawContent.get("kick")
 
-            #message specififc things
-            self.sender = idReturn(rawContent.get("sender"))
-            self.age = idReturn(rawContent.get("age"))
-            self.event = idReturn(rawContent.get("event_id"))
-            self.room = idReturn(rawContent.get("room_id"))
+            self._hasData = True
+
+        def __bool__(self):
+            return self._hasData
+
+    class room_server_acl(object):
+        """
+            server_acl's might not be specified in every room
+        """
+        def __init__(self, rawContent=None):
+            self.allow_ip_literals = None
+            self.allow = None
+            self.deny = None
+
+            self._raw = rawContent
+            self._hasData = False
+
+            if rawContent:
+                self._parseRawContent(rawContent)
+
+
+        def _parseRawContent(self, rawContent):
+
+            self.allow_ip_literals = rawContent.get("allow_ip_literals")
+            self.allow = rawContent.get("allow", [])
+            self.deny = rawContent.get("deny", [])
             self._hasData = True
 
         def __bool__(self):
