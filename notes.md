@@ -56,6 +56,7 @@ struct:
 - [x] send_typing
 - [x] better documentation
 - [ ] Improve /sync calls
+- [ ] post image messages
 
 ## RC 3
 - [ ] encryption

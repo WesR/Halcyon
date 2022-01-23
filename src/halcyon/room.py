@@ -10,7 +10,7 @@
         m.room.avatar
         m.room.canonical_alias
         m.room.aliases
-        m.room.power_levels
+        m.room.power_levels (could probably be fleshed out)
 
     TODO:
         m.room.guest_access
@@ -99,7 +99,7 @@ class room(object):
                         self.members.append(event["user_id"])
 
                 if event["type"] == "m.room.power_levels":
-                    self.predecessor = self.roomPermissions(event["content"])
+                    self.permissions = self.roomPermissions(event["content"])
 
     def __bool__(self):
         return self._hasData
@@ -131,13 +131,30 @@ class room(object):
 
     class roomPermissions(object):
         def __init__(self, rawContent=None):
+            #matrix defaults
+            self.administrator_value = None
+            self.moderator_value = None
+            self.user_value = None
+            self.events_value = None
+            self.state_value = None
+            self.m_event_values = None
 
-            self.administrator_value = 100
+            #synthetic = None
+            self = None
+            self.moderators = None
+            self.users = None
 
-            #synthetic
-            self.administrators = {k:v for (k,v) in rawContent["users"].items() if v==100}
-            self.moderators
+            #actions = None
+            self = None
+            self.redact = None
+            self.ban = None
+            self.kick = None
 
+            #message specific things
+            self.sender = None
+            self.age = None
+            self.event = None
+            self.room = None
 
             self._raw = rawContent
             self._hasData = False
@@ -148,10 +165,44 @@ class room(object):
 
         def _parseRawContent(self, rawContent):
             """
-                "event_id": "$something:example.org",
-                "room_id": "!oldroom:example.org"
+                {
+                      "events": {
+                        "m.room.avatar": 50,
+                        "im.vector.modular.widgets": 50,
+                        "m.room.history_visibility": 100,
+                        "m.room.name": 50,
+                        "m.room.server_acl": 100,
+                        "m.room.tombstone": 100,
+                        "m.room.encryption": 100,
+                        "m.room.canonical_alias": 50,
+                        "m.room.power_levels": 100,
+                        "m.room.topic": 50,
+                        "m.space.child": 50
+                      }
+                    }
             """
+            #matrix defaults
+            self.administrator_value = 100#used for synthetic
+            self.moderator_value = 50
+            self.user_value = rawContent.get("users_default")#recomended 0
+            self.events_value = rawContent.get("events_default")#rec 0
+            self.state_value = rawContent.get("state_default")#rec 50
+            self.m_event_values = rawContent.get("events")#its that big dict of m.room.avatar etc
 
+            #synthetic
+            self.administrators = {k:v for (k,v) in rawContent["users"].items() if v==self.administrator_value}
+            self.moderators = {k:v for (k,v) in rawContent["users"].items() if v==self.moderator_value}
+            self.users = rawContent.get("users")#everyone
+
+            #actions
+            self.invite = rawContent.get("invite")
+            self.redact = rawContent.get("redact")
+            self.ban = rawContent.get("ban")
+            self.kick = rawContent.get("kick")
+
+            #message specififc things
+            self.sender = idReturn(rawContent.get("sender"))
+            self.age = idReturn(rawContent.get("age"))
             self.event = idReturn(rawContent.get("event_id"))
             self.room = idReturn(rawContent.get("room_id"))
             self._hasData = True
