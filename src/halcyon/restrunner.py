@@ -1,4 +1,5 @@
-import json, requests, enum, uuid, time
+import json, enum, uuid, time
+import requests
 import logging
 import io
 from halcyon.enums import *
@@ -26,7 +27,7 @@ class Runner:
         if homeserver:
             self.HOMESERVER = self._wellknownLookup(homeserver)["m.homeserver"]["base_url"]
 
-    def _request(self, method, endpoint, basepath=None, query=None, payload=None, returnRawContent=None, fileData=None, retryCount=1):
+    def _request(self, method, endpoint, basepath=None, query=None, payload=None, returnRawContent=None, fileData=None, timeout=None, retryCount=1):
         """
         The request method
 
@@ -37,6 +38,7 @@ class Runner:
         @param payload Dict/json OPTIONAL The json payload
         @param returnRawContent OBJ OPTIONAL Used to return the content instead of parsing to json first
         @param fileData OBJ OPTIONAL data payload to send
+        @param timeout int() timeout for the http responce
         @param retryCount int OPTIONAL downcount to retry the request until failure
         """
 
@@ -51,8 +53,9 @@ class Runner:
         }
 
         try:
-            resp = self.SESSION.request(method, url, json=payload, headers=headers, params=query, data=fileData)
+            resp = self.SESSION.request(method, url, json=payload, headers=headers, params=query, data=fileData, timeout=timeout)
             resp.raise_for_status()
+        #except requests.Timeout:
         except:
             if retryCount > 0:
                 retryCount = retryCount - 1
@@ -68,31 +71,34 @@ class Runner:
             except:
                 return {} # on failure just default to nothing
 
-    def _get(self, endpoint, basepath=None, query=None, returnRawContent=None):
+    def _get(self, endpoint, basepath=None, query=None, returnRawContent=None, timeout=None):
         """
         @param endpoint String rest of the https string
         @param basepath enum OPTIONAL The basepath for the request (defaults to client)
         @param query Dict OPTIONAL url query
+        @param timeout int OPTIONAL set a timeout on the http request
         """
-        return self._request(method="GET", endpoint=endpoint, basepath=basepath, query=query, returnRawContent=returnRawContent)
+        return self._request(method="GET", endpoint=endpoint, basepath=basepath, query=query, returnRawContent=returnRawContent, timeout=timeout)
 
-    def _post(self, endpoint, basepath=None, query=None, payload=None, fileData=None):
+    def _post(self, endpoint, basepath=None, query=None, payload=None, fileData=None, timeout=None):
         """
         @param endpoint String rest of the https string
         @param basepath enum OPTIONAL The basepath for the request (defaults to client)
         @param query Dict OPTIONAL url query
         @param payload Dict/json OPTIONAL The json payload
+        @param timeout int OPTIONAL set a timeout on the http request
         """
-        return self._request(method="POST", endpoint=endpoint, basepath=basepath, query=query, payload=payload, fileData=fileData)
+        return self._request(method="POST", endpoint=endpoint, basepath=basepath, query=query, payload=payload, fileData=fileData, timeout=timeout)
 
-    def _put(self, endpoint, basepath=None, query=None, payload=None):
+    def _put(self, endpoint, basepath=None, query=None, payload=None, timeout=None):
         """
             @param endpoint String rest of the https string
             @param basepath enum OPTIONAL The basepath for the request (defaults to client)
             @param query Dict OPTIONAL url query
             @param payload Dict/json OPTIONAL The json payload
+            @param timeout int OPTIONAL set a timeout on the http request
         """
-        return self._request(method="PUT", endpoint=endpoint, basepath=basepath, query=query, payload=payload)
+        return self._request(method="PUT", endpoint=endpoint, basepath=basepath, query=query, payload=payload, timeout=timeout)
 
     def _wellknownLookup(self, homeserver):
         try:
@@ -363,10 +369,13 @@ class Runner:
         return self._put(endpoint=endpoint, payload=payload)
 
 
-    def sync(self, serverSideFilter=None, presence=None, since=None):
+    def sync(self, serverSideFilter=None, presence=None, since=None, timeout=None):
         """
-        big fuc
-        s167221_9050551_0_516082_36840_65_33646_75651_20
+            The big Sync call
+            @param serverSideFilter string filter
+            @param presence String presenc for the user. Defaults online
+            @param since String ask for every action since this specific pagnation ID
+            @param timeout int Ask the server to long poll. 
         """
 
         if not presence:
@@ -382,8 +391,12 @@ class Runner:
         if since:
             query["since"] = since
 
-        
-        return self._get("sync", query=query)
+        if timeout:
+            query["timeout"] = timeout*1000#the server takes miliseconds
+            http_request_timeout = (timeout+3)#leave 3 seconds for slow connections
+
+        logging.debug("Starting new poll!")
+        return self._get("sync", query=query, timeout=timeout)
 
 
     def sendEvent(self, roomID, eventType, eventPayload):

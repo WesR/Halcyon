@@ -18,7 +18,8 @@ class Client:
     def __init__(self, loop=None, ignoreFirstSync=True):
         self.loop = asyncio.get_event_loop() if loop is None else loop
         self.logoutOnDeath = False
-        self.loopPollInterval = 7#seconds
+        self.loopPollInterval = 0.1#seconds
+        self.long_poll_timeout = 20#seconds
 
         self.restrunner = None
         self.sinceToken = str()
@@ -109,24 +110,24 @@ class Client:
 
         joined_rooms = self.restrunner.joinedRooms()
         for roomID in joined_rooms:
-            self.roomCache["rooms"][roomID] = room(self.restrunner.getRoomState(roomID), roomID)
+            self.roomCache["rooms"][roomID] = room(rawEvents=self.restrunner.getRoomState(roomID), roomID=roomID)
 
 
     def _addRoomToCache(self, roomID):
         """
             Add a room to the room cache, can be used to refresh an old room cache
         """
-        self.roomCache["rooms"][roomID] = room(self.restrunner.getRoomState(roomID), roomID)
+        self.roomCache["rooms"][roomID] = room(rawEvents=self.restrunner.getRoomState(roomID), roomID=roomID)
 
     def _getRoom(self, roomID):
         """
-            retrive a room from the roomcache, cacheing if it is not already in the cache
+            retrieve a room from the roomcache, caching if it is not already in the cache
             @param roomID String the room ID
         """
         if roomID in self.roomCache["rooms"]:
             return self.roomCache["rooms"][roomID]
         else:
-            self._addRoomToCache(self, roomID)
+            self._addRoomToCache(roomID)
 
             #if it doesn't populate, return an empty room
             if roomID in self.roomCache["rooms"]:
@@ -155,7 +156,7 @@ class Client:
 
     async def _homeserverSync(self):
 
-        resp = self.restrunner.sync(since=self.sinceToken)
+        resp = self.restrunner.sync(since=self.sinceToken, timeout=self.long_poll_timeout)
         if "next_batch" not in resp:#This should catch bad syncs
             return
 
@@ -201,7 +202,7 @@ class Client:
                                 Because of this, we are going to compress the following types inside the room obj
                                 m.room.create m.room.join_rules m.room.name m.room.member 
                             """
-                            newRoom = room(resp["rooms"]["invite"][roomID]["invite_state"]["events"], roomID)
+                            newRoom = room(rawEvents=resp["rooms"]["invite"][roomID]["invite_state"]["events"], roomID=roomID)
                             await self.on_room_invite(newRoom)
                     
 
@@ -290,7 +291,9 @@ class Client:
 
 
     async def join_room(self, roomID):
-        return(self.restrunner.joinRoom(roomID))
+        resp = self.restrunner.joinRoom(roomID)
+        self._addRoomToCache(roomID)#update the cache, since we might be able to see more room info
+        return resp
 
 
     async def change_presence(self, presence=None, statusMessage=None):
@@ -366,10 +369,15 @@ class Client:
             await self._homeserverSync()
             await asyncio.sleep(self.loopPollInterval)
 
-    def run(self, halcyonToken=None, userID=None, password=None, homeserver=None, loopPollInterval=None):
+    def run(self, halcyonToken=None, userID=None, password=None, homeserver=None, loopPollInterval=None, longPollTimeout=None):
         
         if loopPollInterval:
-            self.loopPollInterval = loopPollInterval
+            print("loopPollInterval has been deprecated because of superior polling update, please set var 'longPollTimeout' instead.")
+            logging.warning("loopPollInterval has been deprecated because of better polling, please set var 'longPollTimeout' instead.")
+
+        if longPollTimeout:
+            logging.info("Custom poll value set")
+            self.long_poll_timeout = longPollTimeout
 
         #login
         self._init(halcyonToken, userID, password, homeserver)
