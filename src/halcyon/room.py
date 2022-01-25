@@ -118,12 +118,16 @@ class room(object):
                       room.members.left
                     """
                     if event["content"]["membership"] == "join":
-                        self.members.append(event["user_id"])
+                        #catch for no user_id in join events for invited rooms
+                        if "user_id" in event:
+                            self.members.append(event["user_id"])
+                        else:
+                            self.members.append(event["state_key"])
 
                     if event["content"]["membership"] == "leave":
                         self.left.append(event["user_id"])
 
-                    if event["content"]["membership"] == "invited":
+                    if event["content"]["membership"] == "invite":
                         self.invited.append(event["state_key"])
 
 

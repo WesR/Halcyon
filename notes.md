@@ -55,7 +55,8 @@ struct:
 - [x] set presence/status
 - [x] send_typing
 - [x] better documentation
-- [ ] Improve /sync calls
+- [x] Improve /sync calls
+- [ ] roomcache update intervals
 - [ ] post image messages
 
 ## RC 3
