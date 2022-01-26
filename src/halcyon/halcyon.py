@@ -107,19 +107,26 @@ class Client:
         """
             Build a cache of room info that can be linked into incoming messages
         """
-        self.roomCache["cache_init_time"] = time.time_ns()#nanoseconds since epoch
+        self.roomCache["cache_age"] = time.time_ns()#nanoseconds since epoch
         self.roomCache["rooms"] = dict()
 
         joined_rooms = self.restrunner.joinedRooms()
         for roomID in joined_rooms:
             self.roomCache["rooms"][roomID] = room(rawEvents=self.restrunner.getRoomState(roomID), roomID=roomID)
 
+    def _refreshRoomCache(self):
+        """
+            Used to refresh the room caches existing rooms
+        """
+        for roomID in self.roomCache["rooms"]:
+            self._addRoomToCache(roomID)
 
     def _addRoomToCache(self, roomID):
         """
             Add a room to the room cache, can be used to refresh an old room cache
         """
         self.roomCache["rooms"][roomID] = room(rawEvents=self.restrunner.getRoomState(roomID), roomID=roomID)
+
 
     def _getRoom(self, roomID):
         """
@@ -369,6 +376,13 @@ class Client:
         await self.on_ready()
         while True:
             await self._homeserverSync()
+
+            #update room cache every hour
+            if (time.time_ns() > (self.roomCache["cache_age"] + 3600000000000)):
+                logging.debug("Updating room cache")
+                self.roomCache["cache_age"] = time.time_ns()
+                self._refreshRoomCache()
+
             await asyncio.sleep(self.loopPollInterval)
 
     def run(self, halcyonToken=None, userID=None, password=None, homeserver=None, loopPollInterval=None, longPollTimeout=None):

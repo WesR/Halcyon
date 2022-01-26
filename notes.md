@@ -49,14 +49,14 @@ struct:
 
 ## RC 2
 - [x] Bot on_ready
-- [ ] Room cache (dict of room obj to build off of)
+- [x] Room cache (dict of room obj to build off of)
 - [x] Media REST services
 - [x] Send and receive Media
 - [x] set presence/status
 - [x] send_typing
 - [x] better documentation
 - [x] Improve /sync calls
-- [ ] roomcache update intervals
+- [x] roomcache update intervals
 - [ ] post image messages
 
 ## RC 3
