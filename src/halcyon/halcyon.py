@@ -19,7 +19,9 @@ class Client:
         self.loop = asyncio.get_event_loop() if loop is None else loop
         self.logoutOnDeath = False
         self.loopPollInterval = 0.1#seconds
-        self.long_poll_timeout = 20#seconds
+        self.long_poll_timeout = 10#seconds, up this value to be nicer to the server.
+        #Bug/Thing I don't like: The client doesn't immediately close when you ctrl^c when you have this value high.
+        #This is because requests is blocking, meaning that we have to wait for a return from the sever before we can handle the SIGs
 
         self.restrunner = None
         self.sinceToken = str()
