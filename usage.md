@@ -154,7 +154,7 @@ if __name__ == '__main__':
     + This is called when you leave a room (or are kicked)
 
 ## halcyon room object
-Below are all of the current values stored in the room objects, inside an example usage of on_message(message)
+Below are all of the current values stored in the room objects, inside an example usage of on_message(message). Non populated values default to none, or an empty list where required.
 ```python
 @client.event
 async def on_message(message):
@@ -197,9 +197,9 @@ async def on_message(message):
 
 
 ## halcyon configuration
-+ `client.run(halcyonToken=None, userID=None, password=None, homeserver=None, loopPollInterval=None)`
++ `client.run(halcyonToken=None, userID=None, password=None, homeserver=None, longPollTimeout=None)`
     + You only need to pass in the `halcyonToken`. If you would like to use password login without a token, you need the us/pw/hs combo. 
-    + `loopPollInterval` is time in seconds between each poll for more matrix messages. Default is 7 seconds.
+    + `longPollTimeout` is time in seconds to long poll the server for more matrix messages. The higher the number, the nicer you are to the server. Editing this does not affect how long it takes for new matrix messages to reach your bot, but it does save network data the higher it is. Default is 10 seconds. Do note, while we wait for the server response, signals to the lib are queued (ie ability to use ctrl^c). After doing a ctrl^c, wait for the network timer to go up, or start typing a message in a channel the bot is in.
 
 
 ## Hot tip
