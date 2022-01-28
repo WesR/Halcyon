@@ -32,7 +32,7 @@ optional arguments:
 Have fun creating
 ```
 
-## Example text bot
+## Example bot
 This bot will auto join any room it is invited to, and will reply to the phrase "give me random" with a random string.
 ```python
 import halcyon
@@ -67,55 +67,11 @@ if __name__ == '__main__':
     client.run(halcyonToken="eyJ0eXAiO...")
 ```
 
-## Example file bot
-This bot will auto join invited rooms. If it sees a message of type image, it will download the image into the lastImage var. When it sees the text "dump last file", it will upload the file to your homeserver under a new mxc URL, and send a message with that mxc url.
+### Example bots
 
-The following are the recognized message types. They can be referenced as such `halcyon.msgType.IMAGE`
-+ TEXT
-+ EMOTE
-+ NOTICE
-+ IMAGE
-+ FILE
-+ AUDIO
-+ LOCATION
-+ VIDEO
-
-
-Note: The file API is subject to change, and is currently under development. 
-```python
-import halcyon, json
-import requests
-
-client = halcyon.Client(ignoreFirstSync=True)
-
-lastImage = None
-lastImageName = ''
-
-@client.event
-async def on_room_invite(room):
-    print("Someone invited us to join " + room.name)
-    await client.join_room(room.id)
-    await client.send_message(room.id, body="Hello humans")
-
-
-@client.event
-async def on_message(message):
-    global lastImage
-    global lastImageName
-
-    print(message.event.id)
-    if (message.type == halcyon.msgType.IMAGE):
-        lastImage = await client.download_media(message.content.url)
-        lastImageName = message.content.body
-        return
-
-    if "dump last file" in message.content.body:
-        resp = await client.upload_media(lastImage, lastImageName)
-        await client.send_message(message.room.id, body="the new mxc is " + resp["content_uri"])
-
-if __name__ == '__main__':
-    client.run(halcyonToken="eyJ0eX...")
-```
+[Example message bot](./examples/basic_message_bot.py), looks for a phrase and replies with a phrase
+[Example image bot](./examples/basic_image_bot.py), looks for a phrase and replies with an image
+[Image Archive bot](./examples/image_archive_bot.py), Looks for images, and saves them
 
 ## halcyon function documentation
 + `client.send_message`
@@ -139,7 +95,13 @@ if __name__ == '__main__':
     + This function is used to update your presence on the server. Status message support is client specific
     + @param `presence` enum/string OPTIONAL The presence of the bot user ie `halcyon.Presence.ONLINE` or `halcyon.Presence.UNAVAILABLE` if idle.
     + @param `statusMessage` String the string to set the current users status to
-
++ `client.send_image`
+    + Send an image to a room
+    + @param `roomID` String the room to send to
+    + @param `fileBuffer` BytesIO The file in bytes format
+    + @param `fileName` String the file name of the file
+    + @param `generate_blurhash` Bool Generate a Bluehash for the image. This is a blur used as filler while the image loads. Defaults True
+    + @param `generate_thumbnail` Bool Set to true to automatically downsize images over 640x640. Defaults True
 
 ## halcyon event handlers
 + `async def on_ready():`
@@ -196,11 +158,12 @@ async def on_message(message):
 ```
 
 
-## halcyon configuration
+## Halcyon configuration
 + `client.run(halcyonToken=None, userID=None, password=None, homeserver=None, longPollTimeout=None)`
     + You only need to pass in the `halcyonToken`. If you would like to use password login without a token, you need the us/pw/hs combo. 
     + `longPollTimeout` is time in seconds to long poll the server for more matrix messages. The higher the number, the nicer you are to the server. Editing this does not affect how long it takes for new matrix messages to reach your bot, but it does save network data the higher it is. Default is 10 seconds. Do note, while we wait for the server response, signals to the lib are queued (ie ability to use ctrl^c). After doing a ctrl^c, wait for the network timer to go up, or start typing a message in a channel the bot is in.
 
 
 ## Hot tip
-You can use something like `message._raw` or `message.content._raw` to see the raw message json
++ You can use something like `message._raw` or `message.content._raw` to see the raw message json
++ Set `longPollTimeout=1` for debugging (but don't forget to change it back!)

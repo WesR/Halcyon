@@ -296,12 +296,12 @@ class Client:
         self.restrunner.sendTyping(roomID, seconds)
 
 
-    async def send_file(self, roomID, body, fileURL, messageType=None, info=None, fileName=None):
+    async def _send_file(self, roomID, body, fileURL, messageType=None, info=None, fileName=None):
         """
             Send a file to a room
             @param roomID str Room to send to
             @param body String A description of the file, normally the filename,
-            @param file BytesIO the actual file data
+            @param fileURL the MXC for the file message
             @param messageType msgType The type of message to send. Use the enums. Defaults to FILE
             @param info Dict OPTIONAL info on the file to send. File specific https://matrix.org/docs/spec/client_server/r0.6.1#m-image
             @param fileName String OPTIONAL the file name of the file to send
@@ -338,7 +338,7 @@ class Client:
             @param roomID String the room to send to
             @param file BytesIO The file in bytes format
             @param fileName String the file name of the file
-            @param generate_blurhash String Generate a Bluehash for the image. This is a blur used as filler while the image loads
+            @param generate_blurhash Bool Generate a Bluehash for the image. This is a blur used as filler while the image loads
             @param generate_thumbnail Bool Set to true to automatically downsize images over 640x640
         """
         fileBuffer = io.BytesIO(fileBuffer)
@@ -376,7 +376,7 @@ class Client:
                 }
 
         loadedImage.close()#not sure if this is required, but might as well be safe
-        return(await self.send_file(roomID=roomID, body=fileName, fileURL=resp["content_uri"], messageType=msgType.IMAGE, info=info, fileName=fileName))
+        return(await self._send_file(roomID=roomID, body=fileName, fileURL=resp["content_uri"], messageType=msgType.IMAGE, info=info, fileName=fileName))
 
 
     async def join_room(self, roomID):
