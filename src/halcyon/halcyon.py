@@ -338,7 +338,7 @@ class Client:
             @param roomID String the room to send to
             @param file BytesIO The file in bytes format
             @param fileName String the file name of the file
-            @param generate_blurhash Bool Generate a Bluehash for the image. This is a blur used as filler while the image loads
+            @param generate_blurhash Bool Generate a Blurhash for the image. This is a blur used as filler while the image loads
             @param generate_thumbnail Bool Set to true to automatically downsize images over 640x640
         """
         fileBuffer = io.BytesIO(fileBuffer)

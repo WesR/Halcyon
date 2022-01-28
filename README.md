@@ -22,6 +22,7 @@ Ask questions in the matrix chat [#halcyon:blackline.xyz](https://matrix.to/#/#h
     - join_room(roomID)
     - download_media(mxc)
     - upload_media(fileBuffer, fileName)
+    - send_image(roomID, fileBuffer, fileName, generate_blurhash, generate_thumbnail)
 - Room and message objects for incoming events events
 - Basic documentation (Check [usage.md](./usage.md))
 
@@ -33,6 +34,9 @@ Ask questions in the matrix chat [#halcyon:blackline.xyz](https://matrix.to/#/#h
 
 ## Example bot code
 See more example and message object info in [usage.md](./usage.md)
++ [Example message bot](./examples/basic_message_bot.py), looks for a phrase and replies with a phrase
++ [Example image bot](./examples/basic_image_bot.py), looks for a phrase and replies with an image
++ [Image Archive bot](./examples/image_archive_bot.py), looks for images, and saves them
 ```python
 import halcyon
 import requests, json
