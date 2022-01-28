@@ -3,6 +3,10 @@ import markdown, re
 import asyncio
 import time
 
+from PIL import Image
+import io
+import blurhash
+
 import functools
 import signal
 
@@ -292,11 +296,87 @@ class Client:
         self.restrunner.sendTyping(roomID, seconds)
 
 
-    async def send_file(self, roomID, body, replyTo=None):
+    async def send_file(self, roomID, body, fileURL, messageType=None, info=None, fileName=None):
+        """
+            Send a file to a room
+            @param roomID str Room to send to
+            @param body String A description of the file, normally the filename,
+            @param file BytesIO the actual file data
+            @param messageType msgType The type of message to send. Use the enums. Defaults to FILE
+            @param info Dict OPTIONAL info on the file to send. File specific https://matrix.org/docs/spec/client_server/r0.6.1#m-image
+            @param fileName String OPTIONAL the file name of the file to send
+        """
         """
             Placeholder for the file form of the send_message command
+            m.image
+            m.audio
+            m.file
+            m.video
         """
-        pass
+
+        if not messageType:
+            messageType = msgType.FILE
+
+        messageContent = {
+            "msgtype": messageType,
+            "body": body,
+            "url": fileURL
+        }
+
+        if info:
+            messageContent["info"] = info
+
+        if fileName:
+            messageContent["filename"] = fileName
+
+        return(self.restrunner.sendEvent(roomID=roomID, eventType="m.room.message", eventPayload=messageContent))
+
+
+    async def send_image(self, roomID, fileBuffer, fileName, generate_blurhash=True, generate_thumbnail=True):
+        """
+            Send an image file to a room
+            @param roomID String the room to send to
+            @param file BytesIO The file in bytes format
+            @param fileName String the file name of the file
+            @param generate_blurhash String Generate a Bluehash for the image. This is a blur used as filler while the image loads
+            @param generate_thumbnail Bool Set to true to automatically downsize images over 640x640
+        """
+        fileBuffer = io.BytesIO(fileBuffer)
+
+        resp = await self.upload_media(fileBuffer, fileName)
+        loadedImage = Image.open(fileBuffer)
+
+        if "content_uri" not in resp:
+            logging.warning("error uploading file: " + str(resp))
+
+        info = {
+            "mimetype" : Image.MIME[loadedImage.format],
+            "w": loadedImage.width,
+            "h": loadedImage.height,
+            "size": fileBuffer.getbuffer().nbytes
+        }
+
+        if generate_blurhash:
+            info["xyz.amorgan.blurhash"] = blurhash.encode(fileBuffer, x_components=4, y_components=3)
+
+        if generate_thumbnail:
+            if loadedImage.height > 640 or loadedImage.width > 640:
+                loadedImage.thumbnail((640,640))
+                thumbnailBuffer = io.BytesIO()
+                loadedImage.save(thumbnailBuffer, format='JPEG')
+
+                thumbnailresp = await self.upload_media(thumbnailBuffer, fileName.split(".")[0] + "_thumbnail.jpeg")
+
+                info["thumbnail_url"] = thumbnailresp["content_uri"]
+                info["thumbnail_info"] = {
+                    "w": loadedImage.size[0],
+                    "h": loadedImage.size[1],
+                    "mimetype": "image/jpeg",
+                    "size": thumbnailBuffer.getbuffer().nbytes
+                }
+
+        loadedImage.close()#not sure if this is required, but might as well be safe
+        return(await self.send_file(roomID=roomID, body=fileName, fileURL=resp["content_uri"], messageType=msgType.IMAGE, info=info, fileName=fileName))
 
 
     async def join_room(self, roomID):
@@ -343,6 +423,8 @@ class Client:
 
             @param file BytesIO object
             @param fileName filename for the object
+
+            @return the MXC url
         """
         return(self.restrunner.uploadMedia(fileData=fileBuffer, fileName=fileName))
 
