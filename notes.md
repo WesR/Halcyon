@@ -57,9 +57,12 @@ struct:
 - [x] better documentation
 - [x] Improve /sync calls
 - [x] roomcache update intervals
-- [ ] post image messages
+- [x] post image messages
 
 ## RC 3
+- [ ] post video messages
+- [ ] post file messages
+- [ ] post audio messages
 - [ ] encryption
 - [ ] read/write server datastore
 - [ ] datastore key in token
