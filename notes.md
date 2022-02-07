@@ -60,15 +60,16 @@ struct:
 - [x] post image messages
 
 ## RC 3
-- [ ] post video messages
-- [ ] post file messages
-- [ ] post audio messages
+- [ ] self.info
 - [ ] encryption
 - [ ] read/write server datastore
 - [ ] datastore key in token
 - [ ] warn log when token doesn't cant support encryption
 
 ## RC 4
+- [ ] post video messages
+- [ ] post file messages
+- [ ] post audio messages
 - [ ] user object
 - [ ] get user presence/status
 - [ ] get user image
