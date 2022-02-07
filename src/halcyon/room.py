@@ -161,12 +161,25 @@ class room(object):
                 "room_id": "!oldroom:example.org"
             """
 
-            self.event = idReturn(rawContent.get("event_id"))
-            self.room = idReturn(rawContent.get("room_id"))
+            self.event = self.idReturn(rawContent.get("event_id"))
+            self.room = self.idReturn(rawContent.get("room_id"))
             self._hasData = True
 
         def __bool__(self):
             return self._hasData
+
+        class idReturn(object):
+            def __init__(self, rawID=None):
+                self.id = None
+                
+                self._hasData = False
+                
+                if rawID:
+                    self.id = rawID
+                    self._hasData = True            
+
+            def __bool__(self):
+                return self._hasData
 
 
     class roomPermissions(object):
@@ -344,17 +357,3 @@ class room(object):
         #        return self.alt.append(self.canonical)
         #    else:
         #        return self.alt
-
-
-    class idReturn(object):
-        def __init__(self, rawID=None):
-            self.id = None
-            
-            self._hasData = False
-            
-            if rawID:
-                self.id = rawID
-                self._hasData = True            
-
-        def __bool__(self):
-            return self._hasData
