@@ -47,9 +47,11 @@ struct:
 - [x] documentation
 - [x] GitHub whl builder
 
-## RC 2
+## R2
 - [x] Bot on_ready
 - [x] Room cache (dict of room obj to build off of)
+- [x] get room permissions
+- [x] get room info
 - [x] Media REST services
 - [x] Send and receive Media
 - [x] set presence/status
@@ -59,14 +61,20 @@ struct:
 - [x] roomcache update intervals
 - [x] post image messages
 
-## RC 3
-- [ ] self.info
+## R3
+- [ ] serverside account data utils https://matrix.org/docs/spec/client_server/r0.6.1#put-matrix-client-r0-user-userid-account-data-type
+- [ ] generate secure curve
+- [ ] upload public key
+- [ ] m.dummy support
+- [ ] room events https://matrix.org/docs/spec/client_server/r0.6.1#id459
+- [ ] /sync extension https://matrix.org/docs/spec/client_server/r0.6.1#id84
 - [ ] encryption
 - [ ] read/write server datastore
 - [ ] datastore key in token
 - [ ] warn log when token doesn't cant support encryption
+- [ ] bot info (user id, client token, auth type)
 
-## RC 4
+## R4 / Future 
 - [ ] post video messages
 - [ ] post file messages
 - [ ] post audio messages
@@ -74,9 +82,9 @@ struct:
 - [ ] get user presence/status
 - [ ] get user image
 - [ ] get user nick
+- [ ] search for user
 - [ ] leave room
 - [ ] list rooms
-- [ ] get room permissions
 - [ ] ban user from room
 - [ ] emotes
 
