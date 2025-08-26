@@ -14,12 +14,16 @@ import halcyon.restrunner
 from halcyon.message import *
 from halcyon.room import *
 from halcyon.enums import *
+from halcyon.security import configure_security
 
 class Client:
     """
         This is the general interface that is exposed to the user
     """
-    def __init__(self, loop=None, ignoreFirstSync=True):
+    def __init__(self, loop=None, ignoreFirstSync=True, security_mode='strict'):
+        # Configure security mode for this client session
+        configure_security(security_mode)
+        
         self.loop = asyncio.get_event_loop() if loop is None else loop
         self.logoutOnDeath = False
         self.loopPollInterval = 0.1#seconds
@@ -33,6 +37,7 @@ class Client:
         self.ignoreFirstSync = ignoreFirstSync
         self.firstSync = True
         self.revokeSessionTokenOnExit = False
+        self.security_mode = security_mode
 
         self.roomCache = dict()
 

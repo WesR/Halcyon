@@ -1,4 +1,3 @@
-
 """
     A object for rooms. Handles event lists.
     Supported:
@@ -22,338 +21,368 @@
         m.room.encrypted
 """
 
-class room(object):
-    def __init__(self, rawEvents=None, roomID=None):
+from pydantic import BaseModel, Field, PrivateAttr
+from typing import Optional, Dict, Any, List, Union
+from halcyon.security import get_nested_config, get_security_mode
+
+
+class IdReturn(BaseModel):
+    """Helper class for Matrix ID references"""
+    model_config = get_nested_config()
+    
+    id: Optional[str] = None
+    _raw: Optional[str] = PrivateAttr(default=None)
+    
+    def __init__(self, raw_id: Optional[str] = None, **kwargs):
+        super().__init__(id=raw_id if raw_id is not None else None, **kwargs)
+        self._raw = raw_id
+    
+    def __bool__(self):
+        return self.id is not None
+
+
+class RoomPredecessor(BaseModel):
+    """Room predecessor information"""
+    model_config = get_nested_config()
+    
+    event: Optional[IdReturn] = None
+    room: Optional[IdReturn] = None
+    _raw: Optional[Dict[str, Any]] = PrivateAttr(default=None)
+    
+    def __init__(self, raw_content: Optional[Dict[str, Any]] = None, **kwargs):
+        if raw_content:
+            super().__init__(
+                event=IdReturn(raw_content.get("event_id")),
+                room=IdReturn(raw_content.get("room_id")),
+                **kwargs
+            )
+            self._raw = raw_content
+        else:
+            super().__init__(**kwargs)
+            self._raw = None
+    
+    def __bool__(self):
+        return self._raw is not None
+
+
+class RoomPermissions(BaseModel):
+    """Room power levels and permissions"""
+    model_config = get_nested_config()
+    
+    # Matrix defaults
+    administrator_value: Optional[int] = None
+    moderator_value: Optional[int] = None
+    user_value: Optional[int] = None
+    events_value: Optional[int] = None
+    state_value: Optional[int] = None
+    m_event_values: Optional[Dict[str, int]] = None
+    
+    # Synthetic fields
+    administrators: Optional[Dict[str, int]] = None
+    moderators: Optional[Dict[str, int]] = None
+    users: Optional[Dict[str, int]] = None
+    
+    # Actions
+    invite_value: Optional[int] = None
+    redact_value: Optional[int] = None
+    ban_value: Optional[int] = None
+    kick_value: Optional[int] = None
+    
+    _raw: Optional[Dict[str, Any]] = PrivateAttr(default=None)
+    
+    def __init__(self, raw_content: Optional[Dict[str, Any]] = None, **kwargs):
+        if raw_content:
+            # Matrix defaults
+            administrator_value = 100  # used for synthetic
+            moderator_value = 50
+            user_value = raw_content.get("users_default")
+            events_value = raw_content.get("events_default")
+            state_value = raw_content.get("state_default")
+            m_event_values = raw_content.get("events")
+            
+            # Synthetic fields
+            users_dict = raw_content.get("users", {})
+            administrators = {k: v for (k, v) in users_dict.items() if v == administrator_value}
+            moderators = {k: v for (k, v) in users_dict.items() if v == moderator_value}
+            
+            super().__init__(
+                administrator_value=administrator_value,
+                moderator_value=moderator_value,
+                user_value=user_value,
+                events_value=events_value,
+                state_value=state_value,
+                m_event_values=m_event_values,
+                administrators=administrators,
+                moderators=moderators,
+                users=users_dict,
+                invite_value=raw_content.get("invite"),
+                redact_value=raw_content.get("redact"),
+                ban_value=raw_content.get("ban"),
+                kick_value=raw_content.get("kick"),
+                **kwargs
+            )
+            self._raw = raw_content
+        else:
+            super().__init__(**kwargs)
+            self._raw = None
+    
+    def __bool__(self):
+        return self._raw is not None
+
+
+class RoomServerAcl(BaseModel):
+    """Room server access control list"""
+    model_config = get_nested_config()
+    
+    allow_ip_literals: Optional[bool] = None
+    allow: List[str] = []
+    deny: List[str] = []
+    _raw: Optional[Dict[str, Any]] = PrivateAttr(default=None)
+    
+    def __init__(self, raw_content: Optional[Dict[str, Any]] = None, **kwargs):
+        if raw_content:
+            super().__init__(
+                allow_ip_literals=raw_content.get("allow_ip_literals"),
+                allow=raw_content.get("allow", []),
+                deny=raw_content.get("deny", []),
+                **kwargs
+            )
+            self._raw = raw_content
+        else:
+            super().__init__(**kwargs)
+            self._raw = None
+    
+    def __bool__(self):
+        return self._raw is not None
+
+
+class RoomEncryption(BaseModel):
+    """Room encryption configuration"""
+    model_config = get_nested_config()
+    
+    algorithm: Optional[str] = None
+    rotation_period_ms: Optional[int] = None
+    rotation_period_msgs: Optional[int] = None
+    _raw: Optional[Dict[str, Any]] = PrivateAttr(default=None)
+    
+    def __init__(self, raw_content: Optional[Dict[str, Any]] = None, **kwargs):
+        if raw_content:
+            super().__init__(
+                algorithm=raw_content.get("algorithm"),
+                rotation_period_ms=raw_content.get("rotation_period_ms"),
+                rotation_period_msgs=raw_content.get("rotation_period_msgs"),
+                **kwargs
+            )
+            self._raw = raw_content
+        else:
+            super().__init__(**kwargs)
+            self._raw = None
+    
+    def __bool__(self):
+        return self._raw is not None
+
+
+class RoomAvatar(BaseModel):
+    """Room avatar information"""
+    model_config = get_nested_config()
+    
+    url: Optional[str] = None
+    _raw: Optional[Dict[str, Any]] = PrivateAttr(default=None)
+    
+    def __init__(self, raw_content: Optional[Dict[str, Any]] = None, **kwargs):
+        if raw_content:
+            super().__init__(
+                url=raw_content.get("url"),
+                **kwargs
+            )
+            self._raw = raw_content
+        else:
+            super().__init__(**kwargs)
+            self._raw = None
+    
+    def __bool__(self):
+        return self._raw is not None
+
+
+class RoomAlias(BaseModel):
+    """Room alias information"""
+    model_config = get_nested_config()
+    
+    canonical: Optional[str] = None
+    alt: List[str] = []
+    _raw: Optional[Dict[str, Any]] = PrivateAttr(default=None)
+    
+    def __init__(self, raw_content: Optional[Dict[str, Any]] = None, **kwargs):
+        if raw_content:
+            super().__init__(
+                canonical=raw_content.get("alias"),
+                alt=raw_content.get("alt_aliases", []),
+                **kwargs
+            )
+            self._raw = raw_content
+        else:
+            super().__init__(**kwargs)
+            self._raw = None
+    
+    def __bool__(self):
+        return self._raw is not None
+
+
+class Room(BaseModel):
+    """Matrix room state and events"""
+    model_config = get_nested_config()
+    
+    # Core room info
+    id: Optional[str] = None
+    
+    # m.room.create
+    creator: Optional[str] = None
+    version: Optional[Union[str, int]] = None
+    federated: Optional[bool] = None
+    predecessor: Optional[RoomPredecessor] = None
+    
+    # m.room.join_rules
+    joinRule: Optional[str] = None
+    
+    # m.room.name
+    name: Optional[str] = None
+    
+    # m.room.topic
+    topic: Optional[str] = None
+    
+    # m.room.aliases and m.room.canonical_alias
+    alias: Optional[RoomAlias] = None
+    
+    # m.room.avatar
+    avatar: Optional[RoomAvatar] = None
+    
+    # m.room.member
+    members: List[str] = []
+    left: List[str] = []
+    invited: List[str] = []
+    
+    # m.room.power_levels
+    permissions: Optional[RoomPermissions] = None
+    
+    # m.room.related_groups
+    relatedGroups: List[str] = []
+    
+    # m.room.guest_access
+    guestAccess: bool = False
+    
+    # m.room.history_visibility
+    historyVisibility: Optional[str] = None
+    
+    # m.room.server_acl
+    acl: Optional[RoomServerAcl] = None
+    
+    # m.room.encryption
+    encryption: Optional[RoomEncryption] = None
+    
+    # Private attributes
+    _rawEvents: Optional[List[Dict[str, Any]]] = PrivateAttr(default=None)
+    _hasData: bool = PrivateAttr(default=False)
+    
+    def __init__(self, rawEvents: Optional[List[Dict[str, Any]]] = None, roomID: Optional[str] = None, **kwargs):
+        # Initialize with defaults
+        super().__init__(id=roomID, **kwargs)
         self._rawEvents = rawEvents
         self._hasData = False
-        self.id = roomID
-
-        #m.room.create
-        self.creator = None
-        self.version = None
-        self.federated = None
-        self.predecessor = None
-
-        #m.room.join_rules
-        self.joinRule = None
-
-        #m.room.name
-        self.name = None
-
-        #m.room.topic
-        self.topic = None
-
-        #m.room.aliases and m.room.canonical_alias
-        self.alias = None
-
-        #m.room.avatar
-        self.avatar = None
-
-        #m.room.member
-        self.members = []
-        self.left = []
-        self.invited = []
-
-        #m.room.power_levels
-        self.permissions = None
-
-        #m.room.related_groups
-        self.relatedGroups = []
-
-        #m.room.guest_access
-        self.guestAccess = False
-
-        #m.room.history_visibility
-        self.historyVisibility = None
-
-        #m.room.server_acl
-        self.acl = None
-
-        #m.room.encryption
-        self.encryption = None
-
+        
         if rawEvents:
+            self._process_events(rawEvents)
+            self._hasData = True
+    
+    def _process_events(self, rawEvents: List[Dict[str, Any]]):
+        """Process Matrix room events and populate fields"""
+        members = []
+        left = []
+        invited = []
+        relatedGroups = []
+        
+        for event in rawEvents:
+            event_type = event.get("type")
+            content = event.get("content", {})
+            
+            if event_type == "m.room.create":
+                self.creator = content.get("creator")
+                self.version = content.get("room_version", 1)  # default to 1 per spec
+                self.federated = content.get("m.federate", True)  # default to true per spec
+                if content.get("predecessor"):
+                    self.predecessor = RoomPredecessor(content.get("predecessor"))
+            
+            elif event_type == "m.room.join_rules":
+                self.joinRule = content.get("join_rule")
+            
+            elif event_type == "m.room.name":
+                self.name = content.get("name")
+            
+            elif event_type == "m.room.topic":
+                self.topic = content.get("topic")
+            
+            elif event_type == "m.room.canonical_alias":
+                self.alias = RoomAlias(content)
+            
+            elif event_type == "m.room.avatar":
+                self.avatar = RoomAvatar(content)
+            
+            elif event_type == "m.room.related_groups":
+                relatedGroups.extend(content.get("groups", []))
+            
+            elif event_type == "m.room.guest_access":
+                # This defaults to false, and is only true if can_join is explicitly set
+                self.guestAccess = (content.get("guest_access") == "can_join")
+            
+            elif event_type == "m.room.history_visibility":
+                self.historyVisibility = content.get("history_visibility")
+            
+            elif event_type == "m.room.member":
+                membership = content.get("membership")
+                if membership == "join":
+                    # catch for no user_id in join events for invited rooms
+                    user_id = event.get("user_id") or event.get("state_key")
+                    if user_id:
+                        members.append(user_id)
+                elif membership == "leave":
+                    if event.get("user_id"):
+                        left.append(event.get("user_id"))
+                elif membership == "invite":
+                    if event.get("state_key"):
+                        invited.append(event.get("state_key"))
+            
+            elif event_type == "m.room.power_levels":
+                self.permissions = RoomPermissions(content)
+            
+            elif event_type == "m.room.server_acl":
+                self.acl = RoomServerAcl(content)
+            
+            elif event_type == "m.room.encryption":
+                self.encryption = RoomEncryption(content)
+        
+        # Set the lists
+        self.members = members
+        self.left = left
+        self.invited = invited
+        self.relatedGroups = relatedGroups
+        
+        # Handle lax mode for extra fields
+        if get_security_mode() == 'lax':
             for event in rawEvents:
-                if event["type"] == "m.room.create":
-                    self.creator = event["content"].get("creator")
-                    self.version = event["content"].get("room_version", 1)#default to 1 per spec
-                    self.federated = event["content"].get("m.federate", True)#default to true per spec
-                    self.predecessor = self.roomPredecessor(event["content"].get("predecessor"))
-                
-                if event["type"] == "m.room.join_rules":
-                    self.joinRule = event["content"].get("join_rule")
-
-                if event["type"] == "m.room.name":
-                    self.name = event["content"].get("name")
-
-                if event["type"] == "m.room.topic":
-                    self.topic = event["content"].get("topic")
-                    #In the future this could be cleaned up so we keep a list of old topics and their replaces
-
-                #These should be EOL
-                #if event["type"] == "m.room.aliases":
-                #    self.aliases.extend(event["content"].get("aliases", []))
-
-                if event["type"] == "m.room.canonical_alias":
-                    self.alias = self.room_alias(event["content"])
-
-                if event["type"] == "m.room.avatar":
-                    self.avatar = self.room_avatar(event["content"])
-
-                if event["type"] == "m.room.related_groups":
-                    self.relatedGroups.extend(event["content"].get("groups", []))
-
-                if event["type"] == "m.room.guest_access":
-                    #This defaults to false, and is only true if can_join is explictly set
-                    self.guestAccess = (event["content"].get("guest_access") == "can_join")
-
-                if event["type"] == "m.room.history_visibility":
-                    self.historyVisibility = event["content"].get("history_visibility")
-
-                if event["type"] == "m.room.member":
-                    """
-                      room.members (just joined) ??
-                      room.members.invited
-                      room.members.banned
-                      room.members.left
-                    """
-                    if event["content"]["membership"] == "join":
-                        #catch for no user_id in join events for invited rooms
-                        if "user_id" in event:
-                            self.members.append(event["user_id"])
-                        else:
-                            self.members.append(event["state_key"])
-
-                    if event["content"]["membership"] == "leave":
-                        self.left.append(event["user_id"])
-
-                    if event["content"]["membership"] == "invite":
-                        self.invited.append(event["state_key"])
-
-
-                if event["type"] == "m.room.power_levels":
-                    self.permissions = self.roomPermissions(event["content"])
-
-                if event["type"] == "m.room.server_acl":
-                    self.acl = self.room_server_acl(event["content"])
-
-                if event["type"] == "m.room.encryption":
-                    self.encryption = self.room_encryption(event["content"])
-
-
+                content = event.get("content", {})
+                for key, value in content.items():
+                    if not hasattr(self, key) and key not in {'creator', 'room_version', 'm.federate', 'predecessor', 'join_rule', 'name', 'topic', 'alias', 'url', 'groups', 'guest_access', 'history_visibility', 'membership', 'users', 'allow_ip_literals', 'allow', 'deny', 'algorithm', 'rotation_period_ms', 'rotation_period_msgs'}:
+                        self.__dict__[key] = value
+    
     def __bool__(self):
         return self._hasData
 
-    class roomPredecessor(object):
-        def __init__(self, rawContent=None):
-            self.event = None
-            self.room = None
-            self._raw = rawContent
-            self._hasData = False
 
-            if rawContent:
-                self._parseRawContent(rawContent)
-
-
-        def _parseRawContent(self, rawContent):
-            """
-                "event_id": "$something:example.org",
-                "room_id": "!oldroom:example.org"
-            """
-
-            self.event = self.idReturn(rawContent.get("event_id"))
-            self.room = self.idReturn(rawContent.get("room_id"))
-            self._hasData = True
-
-        def __bool__(self):
-            return self._hasData
-
-        class idReturn(object):
-            def __init__(self, rawID=None):
-                self.id = None
-                
-                self._hasData = False
-                
-                if rawID:
-                    self.id = rawID
-                    self._hasData = True            
-
-            def __bool__(self):
-                return self._hasData
-
-
-    class roomPermissions(object):
-        def __init__(self, rawContent=None):
-            #matrix defaults
-            self.administrator_value = None
-            self.moderator_value = None
-            self.user_value = None
-            self.events_value = None
-            self.state_value = None
-            self.m_event_values = None
-
-            #synthetic
-            self.administrators = None
-            self.moderators = None
-            self.users = None
-
-            #actions
-            self.invite_value = None
-            self.redact_value = None
-            self.ban_value = None
-            self.kick_value = None
-
-            self._raw = rawContent
-            self._hasData = False
-
-            if rawContent:
-                self._parseRawContent(rawContent)
-
-
-        def _parseRawContent(self, rawContent):
-            """
-                {
-                      "events": {
-                        "m.room.avatar": 50,
-                        "im.vector.modular.widgets": 50,
-                        "m.room.history_visibility": 100,
-                        "m.room.name": 50,
-                        "m.room.server_acl": 100,
-                        "m.room.tombstone": 100,
-                        "m.room.encryption": 100,
-                        "m.room.canonical_alias": 50,
-                        "m.room.power_levels": 100,
-                        "m.room.topic": 50,
-                        "m.space.child": 50
-                      }
-                    }
-            """
-            #matrix defaults
-            self.administrator_value = 100#used for synthetic
-            self.moderator_value = 50
-            self.user_value = rawContent.get("users_default")#recomended 0
-            self.events_value = rawContent.get("events_default")#rec 0
-            self.state_value = rawContent.get("state_default")#rec 50
-            self.m_event_values = rawContent.get("events")#its that big dict of m.room.avatar etc
-
-            #synthetic
-            self.administrators = {k:v for (k,v) in rawContent["users"].items() if v==self.administrator_value}
-            self.moderators = {k:v for (k,v) in rawContent["users"].items() if v==self.moderator_value}
-            self.users = rawContent.get("users")#everyone
-
-            #actions
-            self.invite_value = rawContent.get("invite")
-            self.redact_value = rawContent.get("redact")
-            self.ban_value = rawContent.get("ban")
-            self.kick_value = rawContent.get("kick")
-
-            self._hasData = True
-
-        def __bool__(self):
-            return self._hasData
-
-    class room_server_acl(object):
-        """
-            server_acl's might not be specified in every room
-        """
-        def __init__(self, rawContent=None):
-            self.allow_ip_literals = None
-            self.allow = None
-            self.deny = None
-
-            self._raw = rawContent
-            self._hasData = False
-
-            if rawContent:
-                self._parseRawContent(rawContent)
-
-
-        def _parseRawContent(self, rawContent):
-
-            self.allow_ip_literals = rawContent.get("allow_ip_literals")
-            self.allow = rawContent.get("allow", [])
-            self.deny = rawContent.get("deny", [])
-            self._hasData = True
-
-        def __bool__(self):
-            return self._hasData
-
-
-    class room_encryption(object):
-        def __init__(self, rawContent=None):
-            self.algorithm = None
-            self.rotation_period_ms = None
-            self.rotation_period_msgs = None
-            self._raw = rawContent
-            self._hasData = False
-
-            if rawContent:
-                self._parseRawContent(rawContent)
-
-
-        def _parseRawContent(self, rawContent):
-            """
-                "algorithm": "m.megolm.v1.aes-sha2"
-                "rotation_period_ms": 604800000,
-                "rotation_period_msgs": 100
-            """
-
-            self.algorithm = rawContent.get("algorithm")
-            self.rotation_period_ms = rawContent.get("rotation_period_ms")
-            self.rotation_period_msgs = rawContent.get("rotation_period_msgs")
-            self._hasData = True
-
-        def __bool__(self):
-            return self._hasData
-
-
-    class room_avatar(object):
-        def __init__(self, rawContent=None):
-            self.url = None
-            self._raw = rawContent
-            self._hasData = False
-
-            if rawContent:
-                self._parseRawContent(rawContent)
-
-
-        def _parseRawContent(self, rawContent):
-            """
-                https://matrix.org/docs/spec/client_server/r0.6.1#m-room-avatar
-            """
-
-            self.url = rawContent.get("url")
-            self._hasData = True
-
-        def __bool__(self):
-            return self._hasData
-
-
-    class room_alias(object):
-        def __init__(self, rawContent=None):
-            self.canonical = None
-            self.alt = []
-
-            self._raw = rawContent
-            self._hasData = False
-
-            if rawContent:
-                self._parseRawContent(rawContent)
-
-
-        def _parseRawContent(self, rawContent):
-            """
-                https://matrix.org/docs/spec/client_server/r0.6.1#m-room-canonical-alias
-            """
-            self.canonical = rawContent.get("alias")
-            self.alt.extend(rawContent.get("alt_aliases", []))
-            self._hasData = True
-
-        def __bool__(self):
-            return self._hasData
-
-        #def __list__(self):
-        #    if self.canonical:
-        #        return self.alt.append(self.canonical)
-        #    else:
-        #        return self.alt
+# Create compatibility aliases for the old nested class structure
+room = Room
+room.roomPredecessor = RoomPredecessor
+room.roomPermissions = RoomPermissions
+room.room_server_acl = RoomServerAcl
+room.room_encryption = RoomEncryption
+room.room_avatar = RoomAvatar
+room.room_alias = RoomAlias
+RoomPredecessor.idReturn = IdReturn

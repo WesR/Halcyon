@@ -9,6 +9,8 @@ class msgType(str, enum.Enum):
      AUDIO = "m.audio"
      LOCATION = "m.location"
      VIDEO = "m.video"
+     SERVER_NOTICE = "m.server_notice"
+     KEY_VERIFICATION_REQUEST = "m.key.verification.request"
 
 class Basepath(str, enum.Enum):
     CLIENT = "_matrix/client/r0"
