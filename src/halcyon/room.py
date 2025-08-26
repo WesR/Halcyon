@@ -1,21 +1,23 @@
 """
-    A object for rooms. Handles event lists.
-    Supported:
-        m.room.create
-        m.room.join_rules
-        m.room.name
-        m.room.topic
-        m.room.related_groups
-        m.room.guest_access
-        m.room.history_visibility
-        m.room.server_acl
-        m.room.encryption
-    Partially:
-        m.room.avatar
-        m.room.canonical_alias
-        m.room.aliases
-        m.room.power_levels (could probably be fleshed out)
-        m.room.member
+    Matrix room state handler. Processes room events and maintains room state.
+    
+    Fully Supported:
+        m.room.create - Complete with room types, additional creators (Matrix v1.16+)
+        m.room.join_rules - Complete with allow conditions for restricted rooms (Matrix v1.2+)
+        m.room.name - Complete
+        m.room.topic - Complete with m.topic content object for MIME types (Matrix v1.15+)
+        m.room.canonical_alias - Complete with canonical and alternative aliases
+        m.room.avatar - Complete with detailed info metadata (dimensions, thumbnails)
+        m.room.guest_access - Complete
+        m.room.history_visibility - Complete
+        m.room.server_acl - Complete with IP literal controls and glob patterns
+        m.room.encryption - Complete with algorithm and rotation settings
+        m.room.power_levels - Complete with notifications and all power level types
+        m.room.member - Complete with user profiles, reasons, authorization, third-party invites
+
+    Deprecated/Legacy (still supported for compatibility):
+        m.room.related_groups (deprecated in Matrix spec)
+        m.room.aliases (deprecated, replaced by m.room.canonical_alias)
 
     For encrypted events:
         m.room.encrypted
@@ -88,6 +90,9 @@ class RoomPermissions(BaseModel):
     ban_value: Optional[int] = None
     kick_value: Optional[int] = None
     
+    # Notifications
+    notifications: Optional[Dict[str, int]] = None
+    
     _raw: Optional[Dict[str, Any]] = PrivateAttr(default=None)
     
     def __init__(self, raw_content: Optional[Dict[str, Any]] = None, **kwargs):
@@ -119,6 +124,7 @@ class RoomPermissions(BaseModel):
                 redact_value=raw_content.get("redact"),
                 ban_value=raw_content.get("ban"),
                 kick_value=raw_content.get("kick"),
+                notifications=raw_content.get("notifications"),
                 **kwargs
             )
             self._raw = raw_content
@@ -187,12 +193,26 @@ class RoomAvatar(BaseModel):
     model_config = get_nested_config()
     
     url: Optional[str] = None
+    # Avatar info metadata
+    info_height: Optional[int] = None
+    info_width: Optional[int] = None  
+    info_mimetype: Optional[str] = None
+    info_size: Optional[int] = None
+    info_thumbnail_url: Optional[str] = None
+    info_thumbnail_info: Optional[Dict[str, Any]] = None
     _raw: Optional[Dict[str, Any]] = PrivateAttr(default=None)
     
     def __init__(self, raw_content: Optional[Dict[str, Any]] = None, **kwargs):
         if raw_content:
+            info = raw_content.get("info", {})
             super().__init__(
                 url=raw_content.get("url"),
+                info_height=info.get("h"),
+                info_width=info.get("w"),
+                info_mimetype=info.get("mimetype"), 
+                info_size=info.get("size"),
+                info_thumbnail_url=info.get("thumbnail_url"),
+                info_thumbnail_info=info.get("thumbnail_info"),
                 **kwargs
             )
             self._raw = raw_content
@@ -228,6 +248,42 @@ class RoomAlias(BaseModel):
         return self._raw is not None
 
 
+class RoomMember(BaseModel):
+    """Room member with profile information"""
+    model_config = get_nested_config()
+    
+    user_id: str
+    membership: str  # join, leave, invite, ban, knock
+    avatar_url: Optional[str] = None
+    displayname: Optional[str] = None
+    is_direct: Optional[bool] = None
+    join_authorised_via_users_server: Optional[str] = None
+    reason: Optional[str] = None
+    third_party_invite: Optional[Dict[str, Any]] = None
+    _raw: Optional[Dict[str, Any]] = PrivateAttr(default=None)
+    
+    def __init__(self, user_id: str, raw_content: Optional[Dict[str, Any]] = None, **kwargs):
+        if raw_content:
+            super().__init__(
+                user_id=user_id,
+                membership=raw_content.get("membership", "leave"),
+                avatar_url=raw_content.get("avatar_url"),
+                displayname=raw_content.get("displayname"),
+                is_direct=raw_content.get("is_direct"),
+                join_authorised_via_users_server=raw_content.get("join_authorised_via_users_server"),
+                reason=raw_content.get("reason"),
+                third_party_invite=raw_content.get("third_party_invite"),
+                **kwargs
+            )
+            self._raw = raw_content
+        else:
+            super().__init__(user_id=user_id, membership="leave", **kwargs)
+            self._raw = None
+    
+    def __bool__(self):
+        return self._raw is not None
+
+
 class Room(BaseModel):
     """Matrix room state and events"""
     model_config = get_nested_config()
@@ -240,15 +296,19 @@ class Room(BaseModel):
     version: Optional[Union[str, int]] = None
     federated: Optional[bool] = None
     predecessor: Optional[RoomPredecessor] = None
+    room_type: Optional[str] = None  # Room type (space, etc.)
+    additional_creators: List[str] = []  # Additional creators (Matrix v1.16+)
     
     # m.room.join_rules
     joinRule: Optional[str] = None
+    join_rule_allow: Optional[List[Dict[str, Any]]] = None  # Allow conditions for restricted rooms
     
     # m.room.name
     name: Optional[str] = None
     
     # m.room.topic
     topic: Optional[str] = None
+    topic_content: Optional[Dict[str, Any]] = None  # m.topic object for MIME types
     
     # m.room.aliases and m.room.canonical_alias
     alias: Optional[RoomAlias] = None
@@ -257,9 +317,10 @@ class Room(BaseModel):
     avatar: Optional[RoomAvatar] = None
     
     # m.room.member
-    members: List[str] = []
+    members: List[str] = []  # Simple list for backward compatibility
     left: List[str] = []
     invited: List[str] = []
+    member_details: Dict[str, RoomMember] = {}  # Detailed member information
     
     # m.room.power_levels
     permissions: Optional[RoomPermissions] = None
@@ -299,6 +360,7 @@ class Room(BaseModel):
         left = []
         invited = []
         relatedGroups = []
+        member_details = {}
         
         for event in rawEvents:
             event_type = event.get("type")
@@ -308,17 +370,21 @@ class Room(BaseModel):
                 self.creator = content.get("creator")
                 self.version = content.get("room_version", 1)  # default to 1 per spec
                 self.federated = content.get("m.federate", True)  # default to true per spec
+                self.room_type = content.get("type")
+                self.additional_creators = content.get("additional_creators", [])
                 if content.get("predecessor"):
                     self.predecessor = RoomPredecessor(content.get("predecessor"))
             
             elif event_type == "m.room.join_rules":
                 self.joinRule = content.get("join_rule")
+                self.join_rule_allow = content.get("allow")
             
             elif event_type == "m.room.name":
                 self.name = content.get("name")
             
             elif event_type == "m.room.topic":
                 self.topic = content.get("topic")
+                self.topic_content = content.get("m.topic")
             
             elif event_type == "m.room.canonical_alias":
                 self.alias = RoomAlias(content)
@@ -338,17 +404,20 @@ class Room(BaseModel):
             
             elif event_type == "m.room.member":
                 membership = content.get("membership")
-                if membership == "join":
-                    # catch for no user_id in join events for invited rooms
-                    user_id = event.get("user_id") or event.get("state_key")
-                    if user_id:
+                user_id = event.get("user_id") or event.get("state_key")
+                
+                if user_id:
+                    # Create detailed member object
+                    member_obj = RoomMember(user_id, content)
+                    member_details[user_id] = member_obj
+                    
+                    # Maintain backward compatibility lists
+                    if membership == "join":
                         members.append(user_id)
-                elif membership == "leave":
-                    if event.get("user_id"):
-                        left.append(event.get("user_id"))
-                elif membership == "invite":
-                    if event.get("state_key"):
-                        invited.append(event.get("state_key"))
+                    elif membership == "leave":
+                        left.append(user_id)
+                    elif membership == "invite":
+                        invited.append(user_id)
             
             elif event_type == "m.room.power_levels":
                 self.permissions = RoomPermissions(content)
@@ -364,6 +433,7 @@ class Room(BaseModel):
         self.left = left
         self.invited = invited
         self.relatedGroups = relatedGroups
+        self.member_details = member_details
         
         # Handle lax mode for extra fields
         if get_security_mode() == 'lax':

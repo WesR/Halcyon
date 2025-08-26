@@ -3,6 +3,30 @@ from typing import Optional, Dict, Any, Union, List
 from halcyon.enums import msgType
 from halcyon.security import get_nested_config, get_message_config, get_security_mode
 
+"""
+    Matrix message content handler. Supports all Matrix message types with full spec compliance (v1.15).
+    
+    Fully Supported Message Types:
+        m.text - Text messages with HTML formatting support
+        m.emote - Action messages (/me commands)
+        m.notice - Notice messages (automated responses)
+        m.image - Image messages with metadata and thumbnails
+        m.file - File attachments with metadata and encryption support
+        m.audio - Audio messages with duration and metadata
+        m.video - Video messages with dimensions and thumbnails
+        m.location - Geographic location messages with geo URIs
+        m.server_notice - Server administrative notices
+        m.key.verification.request - Key verification requests
+
+    Advanced Features:
+        - HTML formatting (format, formatted_body)
+        - File encryption support (file field for encrypted attachments)
+        - Original filename preservation (Matrix v1.10+)
+        - Comprehensive metadata (dimensions, duration, thumbnails)
+        - Server notices with admin contacts and usage limits
+        - Key verification with device IDs and methods
+        - Full backward compatibility with existing code
+"""
 
 class IdReturn(BaseModel):
     """Helper class for Matrix ID references"""

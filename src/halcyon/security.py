@@ -1,7 +1,5 @@
 """
-Security configuration for Halcyon Matrix bot library.
-
-Provides configurable security modes for Pydantic model validation:
+Security configuration for Pydantic model validation:
 - 'strict': Secure defaults (extra='ignore', arbitrary_types=False) 
 - 'lax': Backward compatible (extra='allow', arbitrary_types=True)
 - 'custom': User-defined settings

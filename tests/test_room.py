@@ -412,3 +412,236 @@ class TestRoomMemberHandling:
         
         test_room = room(events, "!test:matrix.org")
         assert "@invited:matrix.org" in test_room.invited
+
+
+class TestNewRoomFields:
+    """Test new room fields from Matrix spec compliance"""
+    
+    def test_room_create_with_type(self):
+        """Test room creation with room type (spaces, etc.)"""
+        events = [{
+            "type": "m.room.create",
+            "content": {
+                "creator": "@creator:matrix.org",
+                "room_version": "9",
+                "type": "m.space"
+            }
+        }]
+        
+        test_room = room(events, "!space:matrix.org")
+        assert test_room.creator == "@creator:matrix.org"
+        assert test_room.version == "9"
+        assert test_room.room_type == "m.space"
+    
+    def test_room_create_with_additional_creators(self):
+        """Test room creation with additional creators (Matrix v1.16+)"""
+        events = [{
+            "type": "m.room.create",
+            "content": {
+                "creator": "@creator:matrix.org",
+                "additional_creators": ["@co-creator1:matrix.org", "@co-creator2:matrix.org"]
+            }
+        }]
+        
+        test_room = room(events, "!test:matrix.org")
+        assert test_room.creator == "@creator:matrix.org"
+        assert test_room.additional_creators == ["@co-creator1:matrix.org", "@co-creator2:matrix.org"]
+    
+    def test_join_rules_with_allow_conditions(self):
+        """Test join rules with allow conditions for restricted rooms"""
+        events = [{
+            "type": "m.room.join_rules", 
+            "content": {
+                "join_rule": "restricted",
+                "allow": [
+                    {
+                        "type": "m.room_membership",
+                        "room_id": "!parent:matrix.org"
+                    }
+                ]
+            }
+        }]
+        
+        test_room = room(events, "!restricted:matrix.org")
+        assert test_room.joinRule == "restricted"
+        assert test_room.join_rule_allow is not None
+        assert len(test_room.join_rule_allow) == 1
+        assert test_room.join_rule_allow[0]["type"] == "m.room_membership"
+        assert test_room.join_rule_allow[0]["room_id"] == "!parent:matrix.org"
+    
+    def test_topic_with_content_object(self):
+        """Test topic with m.topic content object for MIME types"""
+        events = [{
+            "type": "m.room.topic",
+            "content": {
+                "topic": "Welcome to the room",
+                "m.topic": {
+                    "m.text": {
+                        "body": "Welcome to the **room**",
+                        "format": "org.matrix.custom.html",
+                        "formatted_body": "Welcome to the <strong>room</strong>"
+                    }
+                }
+            }
+        }]
+        
+        test_room = room(events, "!test:matrix.org")
+        assert test_room.topic == "Welcome to the room"
+        assert test_room.topic_content is not None
+        assert "m.text" in test_room.topic_content
+        assert test_room.topic_content["m.text"]["body"] == "Welcome to the **room**"
+    
+    def test_avatar_with_info_metadata(self):
+        """Test avatar with detailed info metadata"""
+        events = [{
+            "type": "m.room.avatar",
+            "content": {
+                "url": "mxc://matrix.org/avatar123",
+                "info": {
+                    "h": 256,
+                    "w": 256,
+                    "mimetype": "image/png",
+                    "size": 12345,
+                    "thumbnail_url": "mxc://matrix.org/thumb123",
+                    "thumbnail_info": {
+                        "h": 64,
+                        "w": 64,
+                        "mimetype": "image/jpeg",
+                        "size": 2048
+                    }
+                }
+            }
+        }]
+        
+        test_room = room(events, "!test:matrix.org")
+        assert test_room.avatar.url == "mxc://matrix.org/avatar123"
+        assert test_room.avatar.info_height == 256
+        assert test_room.avatar.info_width == 256
+        assert test_room.avatar.info_mimetype == "image/png"
+        assert test_room.avatar.info_size == 12345
+        assert test_room.avatar.info_thumbnail_url == "mxc://matrix.org/thumb123"
+        assert test_room.avatar.info_thumbnail_info["h"] == 64
+    
+    def test_power_levels_with_notifications(self):
+        """Test power levels with notifications object"""
+        events = [{
+            "type": "m.room.power_levels",
+            "content": {
+                "users": {
+                    "@admin:matrix.org": 100,
+                    "@mod:matrix.org": 50
+                },
+                "users_default": 0,
+                "events_default": 0,
+                "state_default": 50,
+                "notifications": {
+                    "room": 50
+                }
+            }
+        }]
+        
+        test_room = room(events, "!test:matrix.org")
+        assert test_room.permissions.notifications is not None
+        assert test_room.permissions.notifications["room"] == 50
+    
+    def test_member_with_profile_info(self):
+        """Test member with detailed profile information"""
+        events = [{
+            "type": "m.room.member",
+            "content": {
+                "membership": "join",
+                "avatar_url": "mxc://matrix.org/user123",
+                "displayname": "Alice Smith",
+                "is_direct": False,
+                "reason": "Joined via invite"
+            },
+            "state_key": "@alice:matrix.org"
+        }]
+        
+        test_room = room(events, "!test:matrix.org")
+        assert "@alice:matrix.org" in test_room.members
+        assert "@alice:matrix.org" in test_room.member_details
+        
+        member = test_room.member_details["@alice:matrix.org"]
+        assert member.user_id == "@alice:matrix.org"
+        assert member.membership == "join"
+        assert member.avatar_url == "mxc://matrix.org/user123"
+        assert member.displayname == "Alice Smith"
+        assert member.is_direct is False
+        assert member.reason == "Joined via invite"
+    
+    def test_member_with_restricted_room_auth(self):
+        """Test member with restricted room authorization"""
+        events = [{
+            "type": "m.room.member",
+            "content": {
+                "membership": "join",
+                "displayname": "Bob",
+                "join_authorised_via_users_server": "@parent-admin:matrix.org"
+            },
+            "state_key": "@bob:matrix.org"
+        }]
+        
+        test_room = room(events, "!restricted:matrix.org")
+        member = test_room.member_details["@bob:matrix.org"]
+        assert member.join_authorised_via_users_server == "@parent-admin:matrix.org"
+    
+    def test_member_with_third_party_invite(self):
+        """Test member with third party invite details"""
+        events = [{
+            "type": "m.room.member",
+            "content": {
+                "membership": "join",
+                "third_party_invite": {
+                    "display_name": "alice@example.com",
+                    "signed": {
+                        "signatures": {},
+                        "token": "sometoken"
+                    }
+                }
+            },
+            "state_key": "@alice:matrix.org"
+        }]
+        
+        test_room = room(events, "!test:matrix.org")
+        member = test_room.member_details["@alice:matrix.org"]
+        assert member.third_party_invite is not None
+        assert member.third_party_invite["display_name"] == "alice@example.com"
+
+
+class TestBackwardCompatibilityNewFields:
+    """Test that new fields don't break existing functionality"""
+    
+    def test_room_without_new_fields_still_works(self):
+        """Test room creation without new fields works as before"""
+        events = [{
+            "type": "m.room.create",
+            "content": {
+                "creator": "@creator:matrix.org"
+            }
+        }]
+        
+        test_room = room(events, "!simple:matrix.org")
+        assert test_room.creator == "@creator:matrix.org"
+        assert test_room.room_type is None
+        assert test_room.additional_creators == []
+        assert test_room.join_rule_allow is None
+        assert test_room.topic_content is None
+    
+    def test_simple_member_events_still_work(self):
+        """Test that simple member events work as before"""
+        events = [{
+            "type": "m.room.member",
+            "content": {"membership": "join"},
+            "state_key": "@simple:matrix.org"
+        }]
+        
+        test_room = room(events, "!test:matrix.org")
+        assert "@simple:matrix.org" in test_room.members
+        assert "@simple:matrix.org" in test_room.member_details
+        
+        member = test_room.member_details["@simple:matrix.org"]
+        assert member.user_id == "@simple:matrix.org"
+        assert member.membership == "join"
+        assert member.avatar_url is None
+        assert member.displayname is None

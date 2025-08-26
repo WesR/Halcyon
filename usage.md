@@ -116,45 +116,97 @@ if __name__ == '__main__':
     + This is called when you leave a room (or are kicked)
 
 ## halcyon room object
-Below are all of the current values stored in the room objects, inside an example usage of on_message(message). Non populated values default to none, or an empty list where required.
+Below are all of the current values stored in the room objects, inside an example usage of on_message(message). Halcyon now provides complete Matrix specification compliance (up to v1.16) with comprehensive room state support. Non populated values default to none, or an empty list where required.
 ```python
 @client.event
 async def on_message(message):
+    # Core Room Information
+    message.room.id #room ID
+    
+    # m.room.create (Complete Matrix v1.16+ support)
     message.room.creator #userID of who made the room 
     message.room.version #room version
     message.room.federated #is this room allowed to federate to other servers?
+    message.room.room_type #room type (e.g., "m.space" for spaces)
+    message.room.additional_creators #list of additional room creators (Matrix v1.16+)
     message.room.predecessor.room #the roomID before this (defaults None if there isnt one)
     message.room.predecessor.event #the event where the room updated
+    
+    # m.room.join_rules (Complete with restricted room support)
     message.room.joinRule #the joinrule for the room
+    message.room.join_rule_allow #allow conditions for restricted rooms (Matrix v1.2+)
+    
+    # m.room.name
     message.room.name #name of the room
+    
+    # m.room.topic (Complete with MIME type support)
     message.room.topic #room topic
+    message.room.topic_content #m.topic content object for MIME types (Matrix v1.15+)
+    
+    # m.room.canonical_alias
     message.room.alias.canonical #main, canonical, address
     message.room.alias.alt #alternative addresses
+    
+    # m.room.avatar (Complete with detailed metadata)
     message.room.avatar.url #the mxc:// url of the avatar
+    message.room.avatar.info_height #avatar height in pixels
+    message.room.avatar.info_width #avatar width in pixels
+    message.room.avatar.info_mimetype #avatar MIME type
+    message.room.avatar.info_size #avatar size in bytes
+    message.room.avatar.info_thumbnail_url #avatar thumbnail URL
+    message.room.avatar.info_thumbnail_info #avatar thumbnail metadata
+    
+    # m.room.member (Complete with user profiles and authorization)
     message.room.members #list, all the room members that have joined
     message.room.left #list, all of the users who have left
     message.room.invited #list, all of the users who have been invited but not joined
-
-    message.room.permissions.administrators #a list of users who are considered administrators
-    message.room.permissions.moderators #a list of users who are considered moderators
-    message.room.permissions.users #all the users with non 0 power levels
-
+    
+    # Detailed member information (New comprehensive support)
+    member = message.room.member_details["@user:matrix.org"]  # Get detailed member info
+    member.user_id #user ID
+    member.membership #join, leave, invite, ban, knock
+    member.avatar_url #member's avatar URL
+    member.displayname #member's display name
+    member.is_direct #whether this is a direct message room
+    member.join_authorised_via_users_server #authorization server for restricted rooms
+    member.reason #reason for membership change (kick/ban reasons)
+    member.third_party_invite #third-party invite information
+    
+    # m.room.power_levels (Complete with notifications support)
+    message.room.permissions.administrators #a dict of users who are considered administrators
+    message.room.permissions.moderators #a dict of users who are considered moderators
+    message.room.permissions.users #all the users with their power levels
+    
     message.room.permissions.m_event_values #a dict() of m.events and the value required to send them
     message.room.permissions.administrator_value #the permission value for administrators (always 100)
-    message.room.permissions.moderator_value #the permission value for administrators (always 50)
-    message.room.permissions.user_value #the permission value for administrators (0)
+    message.room.permissions.moderator_value #the permission value for moderators (always 50)
+    message.room.permissions.user_value #the default permission value for users
     message.room.permissions.events_value #The level required to send specific event types
     message.room.permissions.state_value #The level required to send state events
     message.room.permissions.invite_value #The level required to invite a user
     message.room.permissions.redact_value #The level required to redact other users comments 
     message.room.permissions.ban_value #The level required to ban a user
     message.room.permissions.kick_value #The level required to kick a user
-
-    message.room.relatedGroups #a list of related groups for this room (ie groups)
+    message.room.permissions.notifications #notification power level settings
+    
+    # m.room.related_groups (Legacy support)
+    message.room.relatedGroups #a list of related groups for this room (deprecated)
+    
+    # m.room.guest_access
     message.room.guestAccess #T/F do we allow guest access?
+    
+    # m.room.history_visibility
     message.room.historyVisibility #["invited", "joined", "shared", "world_readable"] 
-    message.room.acl #if any server ACL has been specified for this room
-    message.room.encryption #information on the rooms encryption (if any)
+    
+    # m.room.server_acl (Complete with IP literal controls)
+    message.room.acl.allow_ip_literals #whether IP literals are allowed
+    message.room.acl.allow #list of allowed server patterns
+    message.room.acl.deny #list of denied server patterns
+    
+    # m.room.encryption (Complete with rotation settings)
+    message.room.encryption.algorithm #encryption algorithm used
+    message.room.encryption.rotation_period_ms #key rotation period in milliseconds
+    message.room.encryption.rotation_period_msgs #key rotation period in message count
 ```
 
 
