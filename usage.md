@@ -102,6 +102,9 @@ if __name__ == '__main__':
     + @param `fileName` String the file name of the file
     + @param `generate_blurhash` Bool Generate a Blurhash for the image. This is a blur used as filler while the image loads. Defaults True
     + @param `generate_thumbnail` Bool Set to true to automatically downsize images over 640x640. Defaults True
++ `client.get_bot_info`
+    + Get comprehensive bot information
+    + @return Dict containing user_id, device_id, auth_type, and homeserver
 
 ## halcyon event handlers
 + `async def on_ready():`

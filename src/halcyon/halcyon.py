@@ -433,6 +433,18 @@ class Client:
         """
         return(self.restrunner.uploadMedia(fileData=fileBuffer, fileName=fileName))
 
+    def get_bot_info(self):
+        """
+            Get comprehensive bot information
+            
+            @return Dict containing user_id, device_id, auth_type, and homeserver
+        """
+        return {
+            "user_id": self.get_user_id(),
+            "device_id": self.get_device_id(),
+            "auth_type": self.get_auth_type(),
+            "homeserver": self.restrunner.HOMESERVER if self.restrunner else None
+        }
 
     def event(self, coro):
         # Validation we don't need to worry about

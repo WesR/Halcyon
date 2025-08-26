@@ -72,7 +72,7 @@ struct:
 - [ ] read/write server datastore
 - [ ] datastore key in token
 - [ ] warn log when token doesn't cant support encryption
-- [ ] bot info (user id, client token, auth type)
+- [x] bot info (user id, client token, auth type)
 
 ## R4 / Future 
 - [ ] post video messages
