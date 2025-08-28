@@ -73,6 +73,7 @@ struct:
 - [ ] datastore key in token
 - [ ] warn log when token doesn't cant support encryption
 - [x] bot info (user id, client token, auth type)
+- [x] fix async issues that lock the bot while longpolling
 
 ## R4 / Future 
 - [ ] post video messages
