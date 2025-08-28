@@ -8,7 +8,7 @@ Ask questions in the matrix chat [#halcyon:blackline.xyz](https://matrix.to/#/#h
 ## Current features
 - A nice CLI tool to generate Halcyon tokens
 - Login with token or username/password
-- Fetch for new messages every x seconds using await
+- Async long polling for new messages with non-blocking event loop
 - Event hooks for
     - on_ready()
     - on_message(message)
@@ -34,12 +34,13 @@ Ask questions in the matrix chat [#halcyon:blackline.xyz](https://matrix.to/#/#h
 
 ## Example bot code
 See more example and message object info in [usage.md](./usage.md)
++ [Example async message bot](./examples/async_message_bot.py), looks for a phrase and replies with a phrase or async called responses
 + [Example message bot](./examples/basic_message_bot.py), looks for a phrase and replies with a phrase
 + [Example image bot](./examples/basic_image_bot.py), looks for a phrase and replies with an image
 + [Image Archive bot](./examples/image_archive_bot.py), looks for images, and saves them
 ```python
 import halcyon
-import requests, json
+import aiohttp, json
 
 client = halcyon.Client()
 
@@ -57,7 +58,11 @@ async def on_message(message):
     print(message.event.id)
     if "give me random" in message.content.body:
         await client.send_typing(message.room.id) # This typing notification will let the user know we've seen their message
-        body = "This looks random: " + requests.get("https://random.wesring.com").json()["value"]
+        # Use async HTTP client for external requests (non-blocking)
+        async with aiohttp.ClientSession() as session:
+            async with session.get("https://random.wesring.com") as resp:
+                data = json.loads(await resp.text())
+                body = f"This looks random: {data['value']}"
         await client.send_message(message.room.id, body=body, replyTo=message.event.id)
 
 

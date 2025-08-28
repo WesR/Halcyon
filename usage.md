@@ -36,7 +36,7 @@ Have fun creating
 This bot will auto join any room it is invited to, and will reply to the phrase "give me random" with a random string.
 ```python
 import halcyon
-import requests, json
+import aiohttp
 
 client = halcyon.Client()
 
@@ -54,7 +54,11 @@ async def on_message(message):
     print(message.event.id)
     if "give me random" in message.content.body:
         await client.send_typing(message.room.id) # This typing notification will let the user know we've seen their message
-        body = "This looks random: " + requests.get("https://random.wesring.com").json()["value"]
+        # Use async HTTP client for external requests (non-blocking)
+        async with aiohttp.ClientSession() as session:
+            async with session.get("https://random.wesring.com") as resp:
+                data = await resp.json()
+                body = f"This looks random: {data['value']}"
         await client.send_message(message.room.id, body=body, replyTo=message.event.id)
 
 
@@ -66,6 +70,8 @@ async def on_ready():
 if __name__ == '__main__':
     client.run(halcyonToken="eyJ0eXAiO...")
 ```
+
+**Pro tip:** Use `aiohttp.ClientSession()` instead of `requests` for external HTTP calls to avoid blocking the bot's event loop.
 
 ### Example bots
 
@@ -216,7 +222,7 @@ async def on_message(message):
 ## Halcyon configuration
 + `client.run(halcyonToken=None, userID=None, password=None, homeserver=None, longPollTimeout=None)`
     + You only need to pass in the `halcyonToken`. If you would like to use password login without a token, you need the us/pw/hs combo. 
-    + `longPollTimeout` is time in seconds to long poll the server for more matrix messages. The higher the number, the nicer you are to the server. Editing this does not affect how long it takes for new matrix messages to reach your bot, but it does save network data the higher it is. Default is 10 seconds. Do note, while we wait for the server response, signals to the lib are queued (ie ability to use ctrl^c). After doing a ctrl^c, wait for the network timer to go up, or start typing a message in a channel the bot is in.
+    + `longPollTimeout` is time in seconds to long poll the server for more matrix messages. The higher the number, the nicer you are to the server. Editing this does not affect how long it takes for new matrix messages to reach your bot, but it does save network calls. Default is 10 seconds.
 
 
 ## Hot tip

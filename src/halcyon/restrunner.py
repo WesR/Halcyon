@@ -1,5 +1,7 @@
 import json, enum, uuid, time
 import requests
+import aiohttp
+import asyncio
 import logging
 import io
 from halcyon.enums import *
@@ -21,11 +23,25 @@ class Runner:
         self.USER_ID = user_id
         self.access_token = access_token
         self.DEVICE_ID = device_id
-        self.SESSION = requests.Session()
+        self.SESSION = requests.Session()  # Keep for backward compatibility
+        self._aio_session = None  # Will be created when needed
         self.TXN_ID = int(str(time.time()).replace(".", ""))
 
         if homeserver:
             self.HOMESERVER = self._wellknownLookup(homeserver)["m.homeserver"]["base_url"]
+
+    async def _ensure_session(self):
+        """Ensure aiohttp session is created"""
+        if self._aio_session is None or self._aio_session.closed:
+            timeout = aiohttp.ClientTimeout(total=120)  # 2 minute default timeout
+            self._aio_session = aiohttp.ClientSession(timeout=timeout)
+        return self._aio_session
+    
+    async def _close_session(self):
+        """Close the aiohttp session"""
+        if self._aio_session and not self._aio_session.closed:
+            await self._aio_session.close()
+            self._aio_session = None
 
     def _request(self, method, endpoint, basepath=None, query=None, payload=None, returnRawContent=None, fileData=None, timeout=None, retryCount=1):
         """
@@ -71,6 +87,67 @@ class Runner:
             except:
                 return {} # on failure just default to nothing
 
+    async def _async_request(self, method, endpoint, basepath=None, query=None, payload=None, returnRawContent=None, fileData=None, timeout=None, retryCount=1):
+        """
+        Async version of the request method using aiohttp
+        
+        @param method string GET, POST...
+        @param endpoint String rest of the https string
+        @param basepath enum OPTIONAL The basepath for the request (defaults to client)
+        @param query Dict OPTIONAL url query
+        @param payload Dict/json OPTIONAL The json payload
+        @param returnRawContent OBJ OPTIONAL Used to return the content instead of parsing to json first
+        @param fileData OBJ OPTIONAL data payload to send
+        @param timeout int() timeout for the http response
+        @param retryCount int OPTIONAL downcount to retry the request until failure
+        """
+        
+        if not basepath:
+            basepath = Basepath.CLIENT
+
+        url = self.HOMESERVER + "/"+ basepath + "/" + endpoint.lstrip("/")
+
+        headers = {
+            "Authorization": "Bearer " + self.access_token,
+        }
+
+        session = await self._ensure_session()
+        
+        try:
+            # Prepare the request parameters
+            request_kwargs = {
+                'headers': headers,
+                'params': query,
+                'timeout': timeout or aiohttp.ClientTimeout(total=30)
+            }
+            
+            # Handle different content types
+            if fileData is not None:
+                request_kwargs['data'] = fileData
+            elif payload is not None:
+                request_kwargs['json'] = payload
+                
+            async with session.request(method, url, **request_kwargs) as resp:
+                resp.raise_for_status()
+                
+                if returnRawContent:
+                    return await resp.read()
+                else:
+                    try:
+                        return await resp.json()
+                    except:
+                        return {}  # on failure just default to nothing
+                        
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            if retryCount > 0:
+                retryCount = retryCount - 1
+                # Add exponential backoff
+                backoff_time = (2 ** (1 - retryCount)) + 0.1
+                await asyncio.sleep(backoff_time)
+                return await self._async_request(method, endpoint, basepath=basepath, query=query, payload=payload, 
+                    returnRawContent=returnRawContent, fileData=fileData, timeout=timeout, retryCount=retryCount)
+            raise
+
     def _get(self, endpoint, basepath=None, query=None, returnRawContent=None, timeout=None):
         """
         @param endpoint String rest of the https string
@@ -99,6 +176,38 @@ class Runner:
             @param timeout int OPTIONAL set a timeout on the http request
         """
         return self._request(method="PUT", endpoint=endpoint, basepath=basepath, query=query, payload=payload, timeout=timeout)
+
+    async def _async_get(self, endpoint, basepath=None, query=None, returnRawContent=None, timeout=None):
+        """
+        Async GET request
+        @param endpoint String rest of the https string
+        @param basepath enum OPTIONAL The basepath for the request (defaults to client)
+        @param query Dict OPTIONAL url query
+        @param timeout int OPTIONAL set a timeout on the http request
+        """
+        return await self._async_request(method="GET", endpoint=endpoint, basepath=basepath, query=query, returnRawContent=returnRawContent, timeout=timeout)
+
+    async def _async_post(self, endpoint, basepath=None, query=None, payload=None, fileData=None, timeout=None):
+        """
+        Async POST request
+        @param endpoint String rest of the https string
+        @param basepath enum OPTIONAL The basepath for the request (defaults to client)
+        @param query Dict OPTIONAL url query
+        @param payload Dict/json OPTIONAL The json payload
+        @param timeout int OPTIONAL set a timeout on the http request
+        """
+        return await self._async_request(method="POST", endpoint=endpoint, basepath=basepath, query=query, payload=payload, fileData=fileData, timeout=timeout)
+
+    async def _async_put(self, endpoint, basepath=None, query=None, payload=None, timeout=None):
+        """
+        Async PUT request
+        @param endpoint String rest of the https string
+        @param basepath enum OPTIONAL The basepath for the request (defaults to client)
+        @param query Dict OPTIONAL url query
+        @param payload Dict/json OPTIONAL The json payload
+        @param timeout int OPTIONAL set a timeout on the http request
+        """
+        return await self._async_request(method="PUT", endpoint=endpoint, basepath=basepath, query=query, payload=payload, timeout=timeout)
 
     def _wellknownLookup(self, homeserver):
         try:
@@ -398,6 +507,36 @@ class Runner:
         logging.debug("Starting new poll!")
         return self._get("sync", query=query, timeout=timeout)
 
+    async def sync_async(self, serverSideFilter=None, presence=None, since=None, timeout=None):
+        """
+            The big Sync call - Async version
+            @param serverSideFilter string filter
+            @param presence String presence for the user. Defaults online
+            @param since String ask for every action since this specific pagination ID
+            @param timeout int Ask the server to long poll. 
+        """
+
+        if not presence:
+            presence = Presence.ONLINE
+
+        query = {
+            "presence" : presence
+        }
+
+        if serverSideFilter:
+            query["filter"] = serverSideFilter
+
+        if since:
+            query["since"] = since
+
+        if timeout:
+            query["timeout"] = timeout*1000  # the server takes milliseconds
+            http_request_timeout = timeout + 3  # leave 3 seconds for slow connections
+        else:
+            http_request_timeout = None
+
+        logging.debug("Starting new async poll!")
+        return await self._async_get("sync", query=query, timeout=http_request_timeout)
 
     def sendEvent(self, roomID, eventType, eventPayload):
         """
@@ -408,6 +547,12 @@ class Runner:
 
         return self._put(endpoint=endpoint, payload=eventPayload)
 
+    async def sendEvent_async(self, roomID, eventType, eventPayload):
+        """
+            Send a matrix event - Async version
+        """
+        endpoint = "rooms/" + roomID + "/send/" + eventType + "/" + self._getTXNID()
+        return await self._async_put(endpoint=endpoint, payload=eventPayload)
 
     def sendState(self, roomID, eventType, eventPayload, stateKey=None):
         """
@@ -458,6 +603,33 @@ class Runner:
         mediaURL = mxc.strip("mxc://").split("/")
         return self.getMedia(serverName=mediaURL[0], mediaID=mediaURL[1])
 
+    async def getMedia_async(self, serverName, mediaID, allowRemote=True):
+        """
+            Get the raw media file from matrix as a BytesIO - Async version
+            
+            @param serverName String the server the media is on
+            @param mediaID String the ID of the string
+            @param allowRemote Bool OPTIONAL Allow the homeserver to download media from remote servers
+            
+            @return BytesIO(media)
+        """
+        query = {
+            "allow_remote" : allowRemote
+        }
+        
+        endpoint = "download/" + serverName + "/" + mediaID
+        content = await self._async_get(endpoint=endpoint, basepath=Basepath.MEDIA, query=query, returnRawContent=True)
+        return io.BytesIO(content)
+
+    async def getMediaFromMXC_async(self, mxc):
+        """
+            Download an image from a mxc url - Async version
+            
+            @param mxc String mxc url
+            @return BytesIO(media)
+        """
+        mediaURL = mxc.strip("mxc://").split("/")
+        return await self.getMedia_async(serverName=mediaURL[0], mediaID=mediaURL[1])
 
     def uploadMedia(self, fileData, fileName):
         """
@@ -475,3 +647,27 @@ class Runner:
 
         #multipart? https://docs.python-requests.org/en/master/user/advanced/#post-multiple-multipart-encoded-files
         return self._post(endpoint=endpoint, basepath=Basepath.MEDIA, query=query, fileData=fileData)
+
+    async def uploadMedia_async(self, fileData, fileName):
+        """
+            Upload a file - Async version
+            
+            @param fileData BytesIO/file data payload to send
+            @param fileName filename for the object
+            
+            @return the MXC url
+        """
+        endpoint = "upload"
+        query = {
+            "filename" : fileName
+        }
+        
+        return await self._async_post(endpoint=endpoint, basepath=Basepath.MEDIA, query=query, fileData=fileData)
+
+    async def __aenter__(self):
+        """Async context manager entry"""
+        return self
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit - cleanup resources"""
+        await self._close_session()

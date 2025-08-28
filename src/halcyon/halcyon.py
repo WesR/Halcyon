@@ -24,7 +24,16 @@ class Client:
         # Configure security mode for this client session
         configure_security(security_mode)
         
-        self.loop = asyncio.get_event_loop() if loop is None else loop
+        # Fix deprecated event loop initialization
+        if loop is None:
+            try:
+                # Try to get running loop first
+                self.loop = asyncio.get_running_loop()
+            except RuntimeError:
+                # No running loop - will be set in run()
+                self.loop = None
+        else:
+            self.loop = loop
         self.logoutOnDeath = False
         self.loopPollInterval = 0.1#seconds
         self.long_poll_timeout = 10#seconds, up this value to be nicer to the server.
@@ -40,6 +49,12 @@ class Client:
         self.security_mode = security_mode
 
         self.roomCache = dict()
+        self._cache_lock = None  # Will be initialized in async context
+
+    def _ensure_async_lock(self):
+        """Ensure the async lock is created"""
+        if self._cache_lock is None:
+            self._cache_lock = asyncio.Lock()
 
     def _encodeTokenDict(self, tokenDict):
         """
@@ -123,6 +138,19 @@ class Client:
         for roomID in joined_rooms:
             self.roomCache["rooms"][roomID] = room(rawEvents=self.restrunner.getRoomState(roomID), roomID=roomID)
 
+    async def _roomcacheinit_async(self, cachePublicRooms=False):
+        """
+            Build a cache of room info that can be linked into incoming messages - Async version
+        """
+        self._ensure_async_lock()
+        async with self._cache_lock:
+            self.roomCache["cache_age"] = time.time_ns()#nanoseconds since epoch
+            self.roomCache["rooms"] = dict()
+
+            joined_rooms = self.restrunner.joinedRooms()
+            for roomID in joined_rooms:
+                self.roomCache["rooms"][roomID] = room(rawEvents=self.restrunner.getRoomState(roomID), roomID=roomID)
+
     def _refreshRoomCache(self):
         """
             Used to refresh the room caches existing rooms
@@ -135,6 +163,14 @@ class Client:
             Add a room to the room cache, can be used to refresh an old room cache
         """
         self.roomCache["rooms"][roomID] = room(rawEvents=self.restrunner.getRoomState(roomID), roomID=roomID)
+
+    async def _addRoomToCache_async(self, roomID):
+        """
+            Add a room to the room cache, can be used to refresh an old room cache - Async version
+        """
+        self._ensure_async_lock()
+        async with self._cache_lock:
+            self.roomCache["rooms"][roomID] = room(rawEvents=self.restrunner.getRoomState(roomID), roomID=roomID)
 
 
     def _getRoom(self, roomID):
@@ -161,6 +197,18 @@ class Client:
         logging.info("Stopping main event loop")
         self.loop.stop()
 
+    async def _async_destruction(self):
+        """Async version of cleanup with proper resource management"""
+        if self.logoutOnDeath:
+            logging.info("Logging out user")
+            logging.info(str(self._logoutUser()))
+        
+        # Close aiohttp session
+        if self.restrunner:
+            await self.restrunner._close_session()
+        
+        logging.info("Stopping main event loop")
+        self.loop.stop()
 
     def _logoutUser(self, revokeAllTokens=False):
         """
@@ -174,7 +222,7 @@ class Client:
 
     async def _homeserverSync(self):
 
-        resp = self.restrunner.sync(since=self.sinceToken, timeout=self.long_poll_timeout)
+        resp = await self.restrunner.sync_async(since=self.sinceToken, timeout=self.long_poll_timeout)
         if "next_batch" not in resp:#This should catch bad syncs
             return
 
@@ -288,7 +336,7 @@ class Client:
                 }
             }
 
-        return(self.restrunner.sendEvent(roomID=roomID, eventType="m.room.message", eventPayload=messageContent))
+        return(await self.restrunner.sendEvent_async(roomID=roomID, eventType="m.room.message", eventPayload=messageContent))
     
 
     async def send_typing(self, roomID, seconds=None):
@@ -334,7 +382,7 @@ class Client:
         if fileName:
             messageContent["filename"] = fileName
 
-        return(self.restrunner.sendEvent(roomID=roomID, eventType="m.room.message", eventPayload=messageContent))
+        return(await self.restrunner.sendEvent_async(roomID=roomID, eventType="m.room.message", eventPayload=messageContent))
 
 
     async def send_image(self, roomID, fileBuffer, fileName, generate_blurhash=True, generate_thumbnail=True):
@@ -420,7 +468,7 @@ class Client:
 
             @return BytesIO bufffer
         """
-        return(self.restrunner.getMediaFromMXC(mxc))
+        return(await self.restrunner.getMediaFromMXC_async(mxc))
 
     async def upload_media(self, fileBuffer, fileName):
         """
@@ -431,7 +479,7 @@ class Client:
 
             @return the MXC url
         """
-        return(self.restrunner.uploadMedia(fileData=fileBuffer, fileName=fileName))
+        return(await self.restrunner.uploadMedia_async(fileData=fileBuffer, fileName=fileName))
 
     def get_bot_info(self):
         """
@@ -450,6 +498,15 @@ class Client:
         # Validation we don't need to worry about
         setattr(self, coro.__name__, coro)
         return coro
+
+    async def __aenter__(self):
+        """Async context manager entry"""
+        self._ensure_async_lock()
+        return self
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit - cleanup resources"""
+        await self._async_destruction()
 
     async def on_ready(self):
         """on ready stub"""
@@ -479,8 +536,10 @@ class Client:
             #update room cache every hour
             if (time.time_ns() > (self.roomCache["cache_age"] + 3600000000000)):
                 logging.debug("Updating room cache")
-                self.roomCache["cache_age"] = time.time_ns()
-                self._refreshRoomCache()
+                self._ensure_async_lock()
+                async with self._cache_lock:
+                    self.roomCache["cache_age"] = time.time_ns()
+                    self._refreshRoomCache()
 
             await asyncio.sleep(self.loopPollInterval)
 
@@ -497,10 +556,20 @@ class Client:
         #login
         self._init(halcyonToken, userID, password, homeserver)
         self._roomcacheinit()
+        
+        # Set up event loop properly
+        if self.loop is None:
+            try:
+                self.loop = asyncio.get_running_loop()
+            except RuntimeError:
+                # No running loop, create a new one
+                self.loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(self.loop)
+        
         loop = self.loop
         try:
-            loop.add_signal_handler(2, lambda: self._destruction())#SIGINT
-            loop.add_signal_handler(15, lambda: self._destruction())#SIGTERM
+            loop.add_signal_handler(2, lambda: asyncio.create_task(self._async_destruction()))#SIGINT
+            loop.add_signal_handler(15, lambda: asyncio.create_task(self._async_destruction()))#SIGTERM
         except NotImplementedError:
             pass
 
@@ -510,4 +579,4 @@ class Client:
         except KeyboardInterrupt:
             logging.info('Keyboard says death')
         finally:
-            self._destruction()
+            loop.run_until_complete(self._async_destruction())
