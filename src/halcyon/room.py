@@ -339,7 +339,14 @@ class Room(BaseModel):
     
     # m.room.encryption
     encryption: Optional[RoomEncryption] = None
-    
+
+    # m.room.pinned_events
+    pinned_events: List[str] = []
+
+    # m.room.tombstone
+    tombstone_body: Optional[str] = None
+    tombstone_replacement_room: Optional[str] = None
+
     # Private attributes
     _rawEvents: Optional[List[Dict[str, Any]]] = PrivateAttr(default=None)
     _hasData: bool = PrivateAttr(default=False)
@@ -355,93 +362,108 @@ class Room(BaseModel):
             self._hasData = True
     
     def _process_events(self, rawEvents: List[Dict[str, Any]]):
-        """Process Matrix room events and populate fields"""
-        members = []
-        left = []
-        invited = []
-        relatedGroups = []
-        member_details = {}
-        
+        """Process a batch of Matrix room state events and populate fields"""
         for event in rawEvents:
-            event_type = event.get("type")
-            content = event.get("content", {})
-            
-            if event_type == "m.room.create":
-                self.creator = content.get("creator")
-                self.version = content.get("room_version", 1)  # default to 1 per spec
-                self.federated = content.get("m.federate", True)  # default to true per spec
-                self.room_type = content.get("type")
-                self.additional_creators = content.get("additional_creators", [])
-                if content.get("predecessor"):
-                    self.predecessor = RoomPredecessor(content.get("predecessor"))
-            
-            elif event_type == "m.room.join_rules":
-                self.joinRule = content.get("join_rule")
-                self.join_rule_allow = content.get("allow")
-            
-            elif event_type == "m.room.name":
-                self.name = content.get("name")
-            
-            elif event_type == "m.room.topic":
-                self.topic = content.get("topic")
-                self.topic_content = content.get("m.topic")
-            
-            elif event_type == "m.room.canonical_alias":
-                self.alias = RoomAlias(content)
-            
-            elif event_type == "m.room.avatar":
-                self.avatar = RoomAvatar(content)
-            
-            elif event_type == "m.room.related_groups":
-                relatedGroups.extend(content.get("groups", []))
-            
-            elif event_type == "m.room.guest_access":
-                # This defaults to false, and is only true if can_join is explicitly set
-                self.guestAccess = (content.get("guest_access") == "can_join")
-            
-            elif event_type == "m.room.history_visibility":
-                self.historyVisibility = content.get("history_visibility")
-            
-            elif event_type == "m.room.member":
-                membership = content.get("membership")
-                user_id = event.get("user_id") or event.get("state_key")
-                
-                if user_id:
-                    # Create detailed member object
-                    member_obj = RoomMember(user_id, content)
-                    member_details[user_id] = member_obj
-                    
-                    # Maintain backward compatibility lists
-                    if membership == "join":
-                        members.append(user_id)
-                    elif membership == "leave":
-                        left.append(user_id)
-                    elif membership == "invite":
-                        invited.append(user_id)
-            
-            elif event_type == "m.room.power_levels":
-                self.permissions = RoomPermissions(content)
-            
-            elif event_type == "m.room.server_acl":
-                self.acl = RoomServerAcl(content)
-            
-            elif event_type == "m.room.encryption":
-                self.encryption = RoomEncryption(content)
-        
-        # Set the lists
+            self.apply_state_event(event)
+
+    def apply_state_event(self, event: Dict[str, Any]):
+        """Apply a single state event to the room, updating fields in place.
+
+        Used both during initial cache hydration and for live incremental
+        updates from /sync state and timeline state events.
+        """
+        event_type = event.get("type")
+        content = event.get("content", {})
+
+        if event_type == "m.room.create":
+            self.creator = content.get("creator")
+            self.version = content.get("room_version", 1)
+            self.federated = content.get("m.federate", True)
+            self.room_type = content.get("type")
+            self.additional_creators = content.get("additional_creators", [])
+            if content.get("predecessor"):
+                self.predecessor = RoomPredecessor(content.get("predecessor"))
+
+        elif event_type == "m.room.join_rules":
+            self.joinRule = content.get("join_rule")
+            self.join_rule_allow = content.get("allow")
+
+        elif event_type == "m.room.name":
+            self.name = content.get("name")
+
+        elif event_type == "m.room.topic":
+            self.topic = content.get("topic")
+            self.topic_content = content.get("m.topic")
+
+        elif event_type == "m.room.canonical_alias":
+            self.alias = RoomAlias(content)
+
+        elif event_type == "m.room.avatar":
+            self.avatar = RoomAvatar(content)
+
+        elif event_type == "m.room.related_groups":
+            self.relatedGroups = list(set(self.relatedGroups) | set(content.get("groups", [])))
+
+        elif event_type == "m.room.guest_access":
+            self.guestAccess = (content.get("guest_access") == "can_join")
+
+        elif event_type == "m.room.history_visibility":
+            self.historyVisibility = content.get("history_visibility")
+
+        elif event_type == "m.room.member":
+            self._apply_member_event(event, content)
+
+        elif event_type == "m.room.power_levels":
+            self.permissions = RoomPermissions(content)
+
+        elif event_type == "m.room.server_acl":
+            self.acl = RoomServerAcl(content)
+
+        elif event_type == "m.room.encryption":
+            self.encryption = RoomEncryption(content)
+
+        elif event_type == "m.room.pinned_events":
+            self.pinned_events = content.get("pinned", [])
+
+        elif event_type == "m.room.tombstone":
+            self.tombstone_body = content.get("body")
+            self.tombstone_replacement_room = content.get("replacement_room")
+
+        self._hasData = True
+
+    def _apply_member_event(self, event: Dict[str, Any], content: Dict[str, Any]):
+        """Apply a membership event, maintaining both member lists and details."""
+        membership = content.get("membership")
+        user_id = event.get("user_id") or event.get("state_key")
+
+        if not user_id:
+            return
+
+        member_obj = RoomMember(user_id, content)
+        self.member_details[user_id] = member_obj
+
+        # Remove from all lists first, then add to the correct one
+        members = list(self.members)
+        left = list(self.left)
+        invited = list(self.invited)
+
+        if user_id in members:
+            members.remove(user_id)
+        if user_id in left:
+            left.remove(user_id)
+        if user_id in invited:
+            invited.remove(user_id)
+
+        if membership == "join":
+            members.append(user_id)
+        elif membership == "leave" or membership == "ban":
+            left.append(user_id)
+        elif membership == "invite":
+            invited.append(user_id)
+
         self.members = members
         self.left = left
         self.invited = invited
-        self.relatedGroups = relatedGroups
-        self.member_details = member_details
-        
-        # Handle lax mode for extra fields
-        if get_security_mode() == 'lax':
-            for event in rawEvents:
-                content = event.get("content", {})
-                for key, value in content.items():
-                    if not hasattr(self, key) and key not in {'creator', 'room_version', 'm.federate', 'predecessor', 'join_rule', 'name', 'topic', 'alias', 'url', 'groups', 'guest_access', 'history_visibility', 'membership', 'users', 'allow_ip_literals', 'allow', 'deny', 'algorithm', 'rotation_period_ms', 'rotation_period_msgs'}:
-                        self.__dict__[key] = value
     
     def __bool__(self):
         return self._hasData

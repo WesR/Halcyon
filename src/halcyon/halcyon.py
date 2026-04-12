@@ -288,6 +288,12 @@ class Client:
     async def _process_timeline_event(self, event, room_id):
         event_type = event.get("type")
 
+        # Timeline events with state_key are state changes; apply to cache
+        if "state_key" in event:
+            cached_room = self._getRoom(room_id)
+            if cached_room:
+                cached_room.apply_state_event(event)
+
         if event_type == "m.room.message":
             newMsg = message(event, self._getRoom(room_id))
             if newMsg.edit:
@@ -298,6 +304,9 @@ class Client:
         await self.on_event(Event(event, room_id=room_id, source="timeline"))
 
     async def _process_state_event(self, event, room_id):
+        cached_room = self._getRoom(room_id)
+        if cached_room:
+            cached_room.apply_state_event(event)
         await self.on_event(Event(event, room_id=room_id, source="state"))
 
     async def _process_ephemeral_event(self, event, room_id):

@@ -645,3 +645,134 @@ class TestBackwardCompatibilityNewFields:
         assert member.membership == "join"
         assert member.avatar_url is None
         assert member.displayname is None
+
+
+class TestLiveStateUpdates:
+    """Test apply_state_event for incremental live updates"""
+
+    def test_apply_name_change(self):
+        """Room name updates in place"""
+        r = room([{"type": "m.room.name", "content": {"name": "Old"}}], "!r:m.org")
+        assert r.name == "Old"
+
+        r.apply_state_event({"type": "m.room.name", "content": {"name": "New"}})
+        assert r.name == "New"
+
+    def test_apply_topic_change(self):
+        r = room([], "!r:m.org")
+        r.apply_state_event({"type": "m.room.topic", "content": {"topic": "Updated"}})
+        assert r.topic == "Updated"
+
+    def test_apply_power_levels(self):
+        r = room([], "!r:m.org")
+        r.apply_state_event({
+            "type": "m.room.power_levels",
+            "content": {
+                "users": {"@admin:m.org": 100},
+                "users_default": 0,
+                "ban": 50,
+            }
+        })
+        assert r.permissions is not None
+        assert r.permissions.ban_value == 50
+
+    def test_apply_member_join(self):
+        r = room([], "!r:m.org")
+        r.apply_state_event({
+            "type": "m.room.member",
+            "state_key": "@alice:m.org",
+            "content": {"membership": "join", "displayname": "Alice"}
+        })
+        assert "@alice:m.org" in r.members
+        assert r.member_details["@alice:m.org"].displayname == "Alice"
+
+    def test_apply_member_leave_removes_from_join(self):
+        r = room([{
+            "type": "m.room.member",
+            "state_key": "@alice:m.org",
+            "content": {"membership": "join"}
+        }], "!r:m.org")
+        assert "@alice:m.org" in r.members
+
+        r.apply_state_event({
+            "type": "m.room.member",
+            "state_key": "@alice:m.org",
+            "content": {"membership": "leave"}
+        })
+        assert "@alice:m.org" not in r.members
+        assert "@alice:m.org" in r.left
+
+    def test_apply_member_ban(self):
+        r = room([{
+            "type": "m.room.member",
+            "state_key": "@bad:m.org",
+            "content": {"membership": "join"}
+        }], "!r:m.org")
+
+        r.apply_state_event({
+            "type": "m.room.member",
+            "state_key": "@bad:m.org",
+            "content": {"membership": "ban", "reason": "spam"}
+        })
+        assert "@bad:m.org" not in r.members
+        assert "@bad:m.org" in r.left
+        assert r.member_details["@bad:m.org"].reason == "spam"
+
+    def test_apply_encryption(self):
+        r = room([], "!r:m.org")
+        assert r.encryption is None
+
+        r.apply_state_event({
+            "type": "m.room.encryption",
+            "content": {"algorithm": "m.megolm.v1.aes-sha2"}
+        })
+        assert r.encryption.algorithm == "m.megolm.v1.aes-sha2"
+
+    def test_apply_alias_change(self):
+        r = room([], "!r:m.org")
+        r.apply_state_event({
+            "type": "m.room.canonical_alias",
+            "content": {"alias": "#new:m.org", "alt_aliases": ["#old:m.org"]}
+        })
+        assert r.alias.canonical == "#new:m.org"
+        assert "#old:m.org" in r.alias.alt
+
+    def test_apply_pinned_events(self):
+        r = room([], "!r:m.org")
+        r.apply_state_event({
+            "type": "m.room.pinned_events",
+            "content": {"pinned": ["$ev1", "$ev2"]}
+        })
+        assert r.pinned_events == ["$ev1", "$ev2"]
+
+    def test_apply_tombstone(self):
+        r = room([], "!r:m.org")
+        r.apply_state_event({
+            "type": "m.room.tombstone",
+            "content": {"body": "Room upgraded", "replacement_room": "!new:m.org"}
+        })
+        assert r.tombstone_body == "Room upgraded"
+        assert r.tombstone_replacement_room == "!new:m.org"
+
+    def test_apply_guest_access(self):
+        r = room([], "!r:m.org")
+        r.apply_state_event({
+            "type": "m.room.guest_access",
+            "content": {"guest_access": "can_join"}
+        })
+        assert r.guestAccess is True
+
+        r.apply_state_event({
+            "type": "m.room.guest_access",
+            "content": {"guest_access": "forbidden"}
+        })
+        assert r.guestAccess is False
+
+    def test_apply_server_acl(self):
+        r = room([], "!r:m.org")
+        r.apply_state_event({
+            "type": "m.room.server_acl",
+            "content": {"allow_ip_literals": False, "allow": ["*.good.org"], "deny": ["bad.org"]}
+        })
+        assert r.acl.allow_ip_literals is False
+        assert "bad.org" in r.acl.deny
