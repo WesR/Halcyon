@@ -324,14 +324,23 @@ class Client:
         await self.on_event(Event(event, room_id=room_id, source="state"))
 
     async def _process_ephemeral_event(self, event, room_id):
-        await self.on_event(Event(event, room_id=room_id, source="ephemeral"))
+        event_type = event.get("type")
+        if event_type == "m.typing":
+            await self.on_event(TypingEvent(event, room_id=room_id))
+        elif event_type == "m.receipt":
+            await self.on_event(ReceiptEvent(event, room_id=room_id))
+        else:
+            await self.on_event(Event(event, room_id=room_id, source="ephemeral"))
 
     async def _process_room_account_data_event(self, event, room_id):
-        await self.on_event(Event(event, room_id=room_id, source="account_data"))
+        await self.on_event(AccountDataEvent(event, room_id=room_id, source="account_data"))
 
     async def _process_presence_events(self, presence_data):
         for event in presence_data.get("events", []):
-            await self.on_event(Event(event, source="presence"))
+            if event.get("type") == "m.presence":
+                await self.on_event(PresenceEvent(event))
+            else:
+                await self.on_event(Event(event, source="presence"))
 
     async def _process_to_device_events(self, to_device_data):
         for event in to_device_data.get("events", []):
@@ -339,7 +348,7 @@ class Client:
 
     async def _process_global_account_data(self, account_data):
         for event in account_data.get("events", []):
-            await self.on_event(Event(event, source="account_data"))
+            await self.on_event(AccountDataEvent(event, source="account_data"))
 
     async def send_message(self, roomID, body, textFormat=None, replyTo=None, isNotice=False):
         """

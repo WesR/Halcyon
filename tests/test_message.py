@@ -260,45 +260,97 @@ class TestIdReturn:
 
 class TestRelates:
     """Test the relates nested class"""
-    
+
     def test_relates_replace(self):
         """Test relates_to for edits"""
         from halcyon.message import message
-        
+
         relates_data = {
             "rel_type": "m.replace",
             "event_id": "$original:matrix.org"
         }
-        
+
         relates = message.relates(relates_data)
         assert bool(relates) is True
         assert relates.type == "m.replace"
         assert relates.eventID == "$original:matrix.org"
-        
+        assert relates.is_edit is True
+        assert relates.is_reply is False
+
     def test_relates_reply(self):
         """Test relates_to for replies"""
         from halcyon.message import message
-        
+
         relates_data = {
             "m.in_reply_to": {
                 "event_id": "$replied:matrix.org"
             }
         }
-        
+
         relates = message.relates(relates_data)
-        # Note: Current implementation doesn't handle m.in_reply_to specially
-        # This test documents current behavior
-        assert relates.type is None  # No rel_type in reply format
-        assert relates.eventID is None
-        
+        assert relates.reply_to_event_id == "$replied:matrix.org"
+        assert relates.is_reply is True
+        assert relates.is_edit is False
+
+    def test_relates_thread(self):
+        """Test relates_to for threads"""
+        from halcyon.message import message
+
+        relates_data = {
+            "rel_type": "m.thread",
+            "event_id": "$thread_root",
+            "m.in_reply_to": {
+                "event_id": "$last_in_thread",
+                "is_falling_back": True
+            }
+        }
+
+        relates = message.relates(relates_data)
+        assert relates.type == "m.thread"
+        assert relates.eventID == "$thread_root"
+        assert relates.is_thread is True
+        assert relates.reply_to_event_id == "$last_in_thread"
+        assert relates.is_falling_back is True
+
+    def test_relates_annotation(self):
+        """Test relates_to for reactions/annotations"""
+        from halcyon.message import message
+
+        relates_data = {
+            "rel_type": "m.annotation",
+            "event_id": "$target",
+            "key": "👍"
+        }
+
+        relates = message.relates(relates_data)
+        assert relates.type == "m.annotation"
+        assert relates.eventID == "$target"
+        assert relates.annotation_key == "👍"
+
+    def test_relates_reference(self):
+        """Test relates_to for references"""
+        from halcyon.message import message
+
+        relates_data = {
+            "rel_type": "m.reference",
+            "event_id": "$ref_target"
+        }
+
+        relates = message.relates(relates_data)
+        assert relates.type == "m.reference"
+        assert relates.eventID == "$ref_target"
+
     def test_relates_empty(self):
         """Test empty relates"""
         from halcyon.message import message
-        
+
         relates = message.relates(None)
         assert bool(relates) is False
         assert relates.type is None
         assert relates.eventID is None
+        assert relates.is_reply is False
+        assert relates.is_edit is False
+        assert relates.is_thread is False
 
 
 class TestNewMessageTypes:

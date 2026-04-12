@@ -200,25 +200,44 @@ class MessageContent(BaseModel):
 
 
 class Relates(BaseModel):
-    """Message relations (replies, edits, reactions)"""
+    """Message relations (replies, edits, reactions, threads, references)"""
     model_config = get_nested_config()
-    
-    type: Optional[str] = None
-    eventID: Optional[str] = None
+
+    type: Optional[str] = None          # rel_type: m.replace, m.annotation, m.reference, m.thread
+    eventID: Optional[str] = None       # event_id from rel_type relation
+    reply_to_event_id: Optional[str] = None  # m.in_reply_to.event_id
+    annotation_key: Optional[str] = None     # key for m.annotation (reactions)
+    is_falling_back: Optional[bool] = None   # m.in_reply_to.is_falling_back (threads)
     _raw: Optional[Dict[str, Any]] = PrivateAttr(default_factory=dict)
-    
+
     def __init__(self, raw_content: Optional[Dict[str, Any]] = None, **kwargs):
         if raw_content:
+            in_reply_to = raw_content.get("m.in_reply_to", {})
             super().__init__(
                 type=raw_content.get("rel_type"),
                 eventID=raw_content.get("event_id"),
+                reply_to_event_id=in_reply_to.get("event_id") if in_reply_to else None,
+                annotation_key=raw_content.get("key"),
+                is_falling_back=in_reply_to.get("is_falling_back") if in_reply_to else None,
                 **kwargs
             )
             self._raw = raw_content
         else:
             super().__init__(**kwargs)
             self._raw = {}
-    
+
+    @property
+    def is_reply(self):
+        return self.reply_to_event_id is not None
+
+    @property
+    def is_edit(self):
+        return self.type == "m.replace"
+
+    @property
+    def is_thread(self):
+        return self.type == "m.thread"
+
     def __bool__(self):
         return bool(self._raw)
 
