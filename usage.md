@@ -110,22 +110,55 @@ if __name__ == '__main__':
     + @param `generate_thumbnail` Bool Set to true to automatically downsize images over 640x640. Defaults True
 + `client.get_bot_info`
     + Get comprehensive bot information
-    + @return Dict containing user_id, device_id, auth_type, and homeserver
+    + @return Dict containing user_id, device_id, and homeserver
 
 ## halcyon event handlers
+
+Halcyon provides typed hooks for common events and a generic fallback for everything else. Typed hooks fire first, then `on_event` fires for the same event. Register hooks using the `@client.event` decorator.
+
 + `async def on_ready():`
-    + This is called after login, right before we start handling messages. Good for telling you your bot is online, or to configure things  
+    + Called after login, right before we start handling messages.
 + `async def on_message(message):`
-    + This is called for each message received, including messages with attachments
+    + Called for each new `m.room.message` event (not edits). Receives a `message` object.
 + `async def on_message_edit(message):`
-    + This is called when a message is edited
+    + Called when a message is edited (has `m.relates_to` with `rel_type: m.replace`).
++ `async def on_reaction(event):`
+    + Called for `m.reaction` events. Receives a `ReactionEvent` with `reaction_key` and `relates_to_event_id`.
++ `async def on_redaction(event):`
+    + Called for `m.room.redaction` events. Receives a `RedactionEvent` with `redacts` (target event ID) and optional `reason`.
++ `async def on_room_member(event):`
+    + Called for `m.room.member` state changes (join, leave, ban, invite, knock). Receives a `MemberEvent`.
 + `async def on_room_invite(room):`
-    + This is called when you are invited to a room
+    + Called when you are invited to a room. Receives a `room` object built from invite stripped state.
 + `async def on_room_leave(roomID):`
-    + This is called when you leave a room (or are kicked)
+    + Called when you leave a room (or are kicked). Receives the room ID string.
++ `async def on_event(event):`
+    + Generic fallback — fires for every sync event, including events handled by typed hooks above. Receives an `Event` (or typed subclass for presence, typing, receipts, account data). Use this to observe event types that don't have a dedicated hook.
+
+### Dispatch order
+1. Room state events update the room cache **before** any hook fires.
+2. Typed hooks (`on_message`, `on_reaction`, etc.) fire for matching events.
+3. `on_event` fires for the same event afterward.
+
+### Event support matrix
+
+| Event type | Typed wrapper | Hook | Source |
+|---|---|---|---|
+| `m.room.message` | `message` | `on_message` / `on_message_edit` | timeline |
+| `m.reaction` | `ReactionEvent` | `on_reaction` | timeline |
+| `m.room.redaction` | `RedactionEvent` | `on_redaction` | timeline |
+| `m.room.member` | `MemberEvent` | `on_room_member` | timeline, state |
+| `m.sticker` | `StickerEvent` | `on_event` | timeline |
+| `m.typing` | `TypingEvent` | `on_event` | ephemeral |
+| `m.receipt` | `ReceiptEvent` | `on_event` | ephemeral |
+| `m.presence` | `PresenceEvent` | `on_event` | presence |
+| account data | `AccountDataEvent` | `on_event` | account_data |
+| all other types | `Event` | `on_event` | varies |
+
+All event objects expose `.sender_user` (a `User` with `id`, `displayname`, `avatar_url`) when sender info is available in the room cache.
 
 ## halcyon room object
-Below are all of the current values stored in the room objects, inside an example usage of on_message(message). Halcyon now provides complete Matrix specification compliance (up to v1.16) with comprehensive room state support. Non populated values default to none, or an empty list where required.
+Below are all of the current values stored in the room objects, inside an example usage of on_message(message). The room cache is updated live from sync state events. Non populated values default to none, or an empty list where required.
 ```python
 @client.event
 async def on_message(message):
@@ -216,6 +249,13 @@ async def on_message(message):
     message.room.encryption.algorithm #encryption algorithm used
     message.room.encryption.rotation_period_ms #key rotation period in milliseconds
     message.room.encryption.rotation_period_msgs #key rotation period in message count
+
+    # m.room.pinned_events
+    message.room.pinned_events #list of pinned event IDs
+
+    # m.room.tombstone
+    message.room.tombstone_body #human-readable reason the room was replaced
+    message.room.tombstone_replacement_room #room ID of the replacement room
 ```
 
 

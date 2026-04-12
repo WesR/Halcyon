@@ -8,23 +8,31 @@ Ask questions in the matrix chat [#halcyon:blackline.xyz](https://matrix.to/#/#h
 ## Current features
 - A nice CLI tool to generate Halcyon tokens
 - Login with token or username/password
-- Async long polling for new messages with non-blocking event loop
-- Event hooks for
-    - on_ready()
-    - on_message(message)
-    - on_message_edit(message)
-    - on_room_invite(room)
-    - on_room_leave(roomID)
+- Async long polling with a structured sync event pipeline
+- Typed event hooks for common events, plus a generic `on_event` fallback for everything else
+- Event hooks
+    - `on_ready()` — bot is online and ready
+    - `on_message(message)` — new room message
+    - `on_message_edit(message)` — edited room message
+    - `on_reaction(event)` — `m.reaction` events
+    - `on_redaction(event)` — `m.room.redaction` events
+    - `on_room_member(event)` — membership changes (join, leave, ban, invite, knock)
+    - `on_room_invite(room)` — invited to a room
+    - `on_room_leave(roomID)` — left or kicked from a room
+    - `on_event(event)` — fires for every sync event (typed and untyped)
 - Action hooks
-    - send_message(roomID, body, textFormat, replyTo, isNotice)
-    - send_typing(roomID, seconds)
-    - change_presence(presence, statusMessage)
-    - join_room(roomID)
-    - download_media(mxc)
-    - upload_media(fileBuffer, fileName)
-    - send_image(roomID, fileBuffer, fileName, generate_blurhash, generate_thumbnail)
-- Room and message objects for incoming events events
-- Basic documentation (Check [usage.md](./usage.md))
+    - `send_message(roomID, body, textFormat, replyTo, isNotice)`
+    - `send_typing(roomID, seconds)`
+    - `change_presence(presence, statusMessage)`
+    - `join_room(roomID)`
+    - `download_media(mxc)`
+    - `upload_media(fileBuffer, fileName)`
+    - `send_image(roomID, fileBuffer, fileName, generate_blurhash, generate_thumbnail)`
+- Live room cache updated from sync state events
+- Typed event models: `Event`, `MemberEvent`, `ReactionEvent`, `RedactionEvent`, `StickerEvent`, `TypingEvent`, `ReceiptEvent`, `PresenceEvent`, `AccountDataEvent`
+- `User` model with sender enrichment on events (`event.sender_user`)
+- Room and message objects for incoming events
+- Documentation in [usage.md](./usage.md)
 
 ## Getting started
 1. Create a matrix account for the bot

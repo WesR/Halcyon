@@ -26,21 +26,7 @@
 from pydantic import BaseModel, Field, PrivateAttr
 from typing import Optional, Dict, Any, List, Union
 from halcyon.security import get_nested_config, get_security_mode
-
-
-class IdReturn(BaseModel):
-    """Helper class for Matrix ID references"""
-    model_config = get_nested_config()
-    
-    id: Optional[str] = None
-    _raw: Optional[str] = PrivateAttr(default=None)
-    
-    def __init__(self, raw_id: Optional[str] = None, **kwargs):
-        super().__init__(id=raw_id if raw_id is not None else None, **kwargs)
-        self._raw = raw_id
-    
-    def __bool__(self):
-        return self.id is not None
+from halcyon.message import IdReturn
 
 
 class RoomPredecessor(BaseModel):

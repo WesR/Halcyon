@@ -61,13 +61,39 @@ struct:
 - [x] roomcache update intervals
 - [x] post image messages
 
+## R2.5
+- [x] Replace one-off `/sync` parsing with a generic event pipeline for `timeline`, `state`, `ephemeral`, `account_data`, `presence`, and `to_device`
+- [x] Add a stable event dispatch design so new Matrix event types can be registered without rewriting the main loop
+- [x] Keep room cache in sync from live state updates instead of relying mostly on periodic rebuilds
+- [x] Expand room event coverage for useful bot cases first
+- [x] `m.room.member` full lifecycle support: join, leave, invite, ban, knock, profile updates
+- [x] `m.reaction` support
+- [x] `m.room.redaction` support
+- [x] `m.sticker` support
+- [x] `m.room.pinned_events` support
+- [x] `m.room.tombstone` support
+- [x] Live handling for room state events we already model in the room object
+- [x] Improve message relations support for replies, edits, references, annotations, and threads
+- [x] Support useful non-room events that bots may want to observe
+- [x] `m.typing` support
+- [x] `m.receipt` support
+- [x] `m.presence` receive support
+- [x] Room account data support via `AccountDataEvent` through `on_event`
+- [x] Global account data support via `AccountDataEvent` through `on_event`
+- [x] Add a real user object instead of exposing only raw sender IDs
+- [x] Add a common raw-event escape hatch so unsupported events are still inspectable by library users
+- [x] Review and clean up the public hook API so it stays small, predictable, and easy to document
+- [x] Add tests per event family instead of only per object parser
+- [x] Expand docs around event coverage, guarantees, and unsupported behavior
+- [x] Update old spec references to the current Matrix spec version instead of `r0.6.1`
+
 ## R3
-- [ ] serverside account data utils https://matrix.org/docs/spec/client_server/r0.6.1#put-matrix-client-r0-user-userid-account-data-type
+- [ ] serverside account data utils https://spec.matrix.org/latest/client-server-api/#put_matrixclientv3useruseridaccount_datatype
 - [ ] generate secure curve
 - [ ] upload public key
 - [ ] m.dummy support
-- [ ] room events https://matrix.org/docs/spec/client_server/r0.6.1#id459
-- [ ] /sync extension https://matrix.org/docs/spec/client_server/r0.6.1#id84
+- [ ] room events https://spec.matrix.org/latest/client-server-api/#room-events
+- [ ] /sync extension https://spec.matrix.org/latest/client-server-api/#syncing
 - [ ] encryption
 - [ ] read/write server datastore
 - [ ] datastore key in token

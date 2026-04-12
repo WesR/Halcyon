@@ -13,9 +13,9 @@ class msgType(str, enum.Enum):
      KEY_VERIFICATION_REQUEST = "m.key.verification.request"
 
 class Basepath(str, enum.Enum):
-    CLIENT = "_matrix/client/r0"
+    CLIENT = "_matrix/client/v3"
     CLIENT_UNSTABLE = "_matrix/client/unstable"
-    MEDIA = "_matrix/media/r0"
+    MEDIA = "_matrix/media/v3"
     SYNAPSE_ADMIN = "_synapse/admin"
 
 class Presence(str, enum.Enum):

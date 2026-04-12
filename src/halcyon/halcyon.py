@@ -1,4 +1,4 @@
-import enum, json, requests, logging, base64
+import json, logging, base64
 import markdown, re
 import asyncio
 import time
@@ -6,9 +6,6 @@ import time
 from PIL import Image
 import io
 import blurhash
-
-import functools
-import signal
 
 import halcyon.restrunner
 from halcyon.message import *
@@ -450,7 +447,7 @@ class Client:
             @param body String A description of the file, normally the filename,
             @param fileURL the MXC for the file message
             @param messageType msgType The type of message to send. Use the enums. Defaults to FILE
-            @param info Dict OPTIONAL info on the file to send. File specific https://matrix.org/docs/spec/client_server/r0.6.1#m-image
+            @param info Dict OPTIONAL info on the file to send. File specific https://spec.matrix.org/latest/client-server-api/#mimage
             @param fileName String OPTIONAL the file name of the file to send
         """
         """
@@ -549,11 +546,6 @@ class Client:
             logging.error("Change presence error: " + resp["error"])
     
 
-    #async def get_user_presence(self, userID):
-    #    print(self.restrunner.getUserPresence(userID=userID))
-    # Include this in a user info/lookup function?
-
-
     async def download_media(self, mxc):
         """
             Returns a BytesIO file fetched from an MXC
@@ -578,14 +570,15 @@ class Client:
     def get_bot_info(self):
         """
             Get comprehensive bot information
-            
-            @return Dict containing user_id, device_id, auth_type, and homeserver
+
+            @return Dict containing user_id, device_id, and homeserver
         """
+        if not self.restrunner:
+            return {"user_id": None, "device_id": None, "homeserver": None}
         return {
-            "user_id": self.get_user_id(),
-            "device_id": self.get_device_id(),
-            "auth_type": self.get_auth_type(),
-            "homeserver": self.restrunner.HOMESERVER if self.restrunner else None
+            "user_id": self.restrunner.USER_ID,
+            "device_id": self.restrunner.DEVICE_ID,
+            "homeserver": self.restrunner.HOMESERVER,
         }
 
     def event(self, coro):

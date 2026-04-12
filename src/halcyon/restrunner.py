@@ -1,4 +1,4 @@
-import json, enum, uuid, time
+import time
 import requests
 import aiohttp
 import asyncio
@@ -556,15 +556,17 @@ class Runner:
 
     def sendState(self, roomID, eventType, eventPayload, stateKey=None):
         """
-            Send a matrix event
+            Send a state event to a room.
 
+            @param roomID String the room ID
+            @param eventType String the state event type
+            @param eventPayload Dict the event content
+            @param stateKey String OPTIONAL the state key
         """
         endpoint = "rooms/" + roomID + "/state/" + eventType
 
         if stateKey:
             endpoint += "/" + stateKey
-
-        time.time().strip(".")
 
         return self._put(endpoint=endpoint, payload=eventPayload)
 
