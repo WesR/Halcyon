@@ -221,9 +221,8 @@ class Client:
 
 
     async def _homeserverSync(self):
-
         resp = await self.restrunner.sync_async(since=self.sinceToken, timeout=self.long_poll_timeout)
-        if "next_batch" not in resp:#This should catch bad syncs
+        if "next_batch" not in resp:
             return
 
         self.sinceToken = resp["next_batch"]
@@ -232,52 +231,86 @@ class Client:
             if "signed_curve25519" in resp["device_one_time_keys_count"]:
                 self.encryptedCurveCount = resp["device_one_time_keys_count"]["signed_curve25519"]
 
-        #This is the stopping point so we dont parse messages first sync
         if self.ignoreFirstSync and self.firstSync:
             self.firstSync = False
             return
 
+        if "presence" in resp:
+            await self._process_presence_events(resp["presence"])
 
-        # handle resp["presence"] events
+        if "to_device" in resp:
+            await self._process_to_device_events(resp["to_device"])
 
-        # handle room events
-
-        # handle room messages
+        if "account_data" in resp:
+            await self._process_global_account_data(resp["account_data"])
 
         if "rooms" in resp:
-            #events for rooms you are in
-            if "join" in resp["rooms"]:
-                for roomID in resp["rooms"]["join"]:
-                    if "timeline" in resp["rooms"]["join"][roomID]:
-                        if "events" in resp["rooms"]["join"][roomID]["timeline"]:
-                            for event in resp["rooms"]["join"][roomID]["timeline"]["events"]:
-                                if event["type"] == "m.room.message":
-                                    #support asyncio.create_task( ?
-                                    newMsg = message(event, self._getRoom(roomID))
-                                    if newMsg.edit:
-                                        await self.on_message_edit(newMsg)
-                                    else:
-                                        await self.on_message(newMsg)
+            rooms = resp["rooms"]
+            if "join" in rooms:
+                await self._process_joined_rooms(rooms["join"])
+            if "invite" in rooms:
+                await self._process_invited_rooms(rooms["invite"])
+            if "leave" in rooms:
+                await self._process_left_rooms(rooms["leave"])
 
-            if "invite" in resp["rooms"]:
-                for roomID in resp["rooms"]["invite"]:
-                    if "invite_state" in resp["rooms"]["invite"][roomID]:
-                        if "events" in resp["rooms"]["invite"][roomID]["invite_state"]:
-                            """
-                                For invites, we don't want to handle each event seperatly, since they are not information dense
-                                Because of this, we are going to compress the following types inside the room obj
-                                m.room.create m.room.join_rules m.room.name m.room.member 
-                            """
-                            newRoom = room(rawEvents=resp["rooms"]["invite"][roomID]["invite_state"]["events"], roomID=roomID)
-                            await self.on_room_invite(newRoom)
-                    
+    async def _process_joined_rooms(self, joined_rooms):
+        for room_id, room_data in joined_rooms.items():
+            if "state" in room_data:
+                for event in room_data["state"].get("events", []):
+                    await self._process_state_event(event, room_id)
 
-            if "leave" in resp["rooms"]:
-                for roomID in resp["rooms"]["leave"]:
-                    await self.on_room_leave(roomID)
+            if "timeline" in room_data:
+                for event in room_data["timeline"].get("events", []):
+                    await self._process_timeline_event(event, room_id)
 
-        #print(json.dumps(resp))
-        #print(json.dumps(self.restrunner.sync(since=self.sinceToken)))
+            if "ephemeral" in room_data:
+                for event in room_data["ephemeral"].get("events", []):
+                    await self._process_ephemeral_event(event, room_id)
+
+            if "account_data" in room_data:
+                for event in room_data["account_data"].get("events", []):
+                    await self._process_room_account_data_event(event, room_id)
+
+    async def _process_invited_rooms(self, invited_rooms):
+        for room_id, room_data in invited_rooms.items():
+            events = []
+            if "invite_state" in room_data:
+                events = room_data["invite_state"].get("events", [])
+            if events:
+                newRoom = room(rawEvents=events, roomID=room_id)
+                await self.on_room_invite(newRoom)
+
+    async def _process_left_rooms(self, left_rooms):
+        for room_id in left_rooms:
+            await self.on_room_leave(room_id)
+
+    async def _process_timeline_event(self, event, room_id):
+        event_type = event.get("type")
+
+        if event_type == "m.room.message":
+            newMsg = message(event, self._getRoom(room_id))
+            if newMsg.edit:
+                await self.on_message_edit(newMsg)
+            else:
+                await self.on_message(newMsg)
+
+    async def _process_state_event(self, event, room_id):
+        pass
+
+    async def _process_ephemeral_event(self, event, room_id):
+        pass
+
+    async def _process_room_account_data_event(self, event, room_id):
+        pass
+
+    async def _process_presence_events(self, presence_data):
+        pass
+
+    async def _process_to_device_events(self, to_device_data):
+        pass
+
+    async def _process_global_account_data(self, account_data):
+        pass
 
     async def send_message(self, roomID, body, textFormat=None, replyTo=None, isNotice=False):
         """

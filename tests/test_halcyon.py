@@ -1,7 +1,7 @@
 import pytest
 import json
 import base64
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, AsyncMock, patch, MagicMock
 from halcyon.halcyon import Client
 from halcyon.message import message
 from halcyon.room import room
@@ -13,8 +13,8 @@ class TestClient:
     def test_client_initialization(self):
         """Test basic client initialization"""
         client = Client()
-        
-        assert client.loop is not None
+
+        assert client.loop is None  # No running loop at init time
         assert client.logoutOnDeath is False
         assert client.loopPollInterval == 0.1
         assert client.long_poll_timeout == 10
@@ -235,76 +235,75 @@ class TestMessageSending:
         """Test basic message sending"""
         client = Client()
         client.restrunner = Mock()
-        client.restrunner.sendEvent.return_value = {"event_id": "$sent:matrix.org"}
-        
+        client.restrunner.sendEvent_async = AsyncMock(return_value={"event_id": "$sent:matrix.org"})
+
         result = await client.send_message("!room:matrix.org", "Hello world")
-        
-        client.restrunner.sendEvent.assert_called_once()
-        call_args = client.restrunner.sendEvent.call_args
-        
+
+        client.restrunner.sendEvent_async.assert_called_once()
+        call_args = client.restrunner.sendEvent_async.call_args
+
         assert call_args[1]["roomID"] == "!room:matrix.org"
         assert call_args[1]["eventType"] == "m.room.message"
         assert call_args[1]["eventPayload"]["msgtype"] == "m.text"
         assert call_args[1]["eventPayload"]["body"] == "Hello world"
-        
+
     @pytest.mark.asyncio
     async def test_send_message_notice(self):
         """Test sending notice message"""
         client = Client()
         client.restrunner = Mock()
-        client.restrunner.sendEvent.return_value = {"event_id": "$sent:matrix.org"}
-        
+        client.restrunner.sendEvent_async = AsyncMock(return_value={"event_id": "$sent:matrix.org"})
+
         await client.send_message("!room:matrix.org", "Notice", isNotice=True)
-        
-        call_args = client.restrunner.sendEvent.call_args
+
+        call_args = client.restrunner.sendEvent_async.call_args
         assert call_args[1]["eventPayload"]["msgtype"] == "m.notice"
-        
+
     @pytest.mark.asyncio
     async def test_send_message_markdown(self):
         """Test sending markdown message"""
         client = Client()
         client.restrunner = Mock()
-        client.restrunner.sendEvent.return_value = {"event_id": "$sent:matrix.org"}
-        
+        client.restrunner.sendEvent_async = AsyncMock(return_value={"event_id": "$sent:matrix.org"})
+
         await client.send_message("!room:matrix.org", "**Bold text**", textFormat="markdown")
-        
-        call_args = client.restrunner.sendEvent.call_args
+
+        call_args = client.restrunner.sendEvent_async.call_args
         payload = call_args[1]["eventPayload"]
-        
+
         assert payload["format"] == "org.matrix.custom.html"
         assert "formatted_body" in payload
         assert "<strong>" in payload["formatted_body"]
-        
+
     @pytest.mark.asyncio
     async def test_send_message_html(self):
         """Test sending HTML message"""
         client = Client()
         client.restrunner = Mock()
-        client.restrunner.sendEvent.return_value = {"event_id": "$sent:matrix.org"}
-        
+        client.restrunner.sendEvent_async = AsyncMock(return_value={"event_id": "$sent:matrix.org"})
+
         html_content = "<p><strong>Bold text</strong></p>"
         await client.send_message("!room:matrix.org", html_content, textFormat="html")
-        
-        call_args = client.restrunner.sendEvent.call_args
+
+        call_args = client.restrunner.sendEvent_async.call_args
         payload = call_args[1]["eventPayload"]
-        
+
         assert payload["format"] == "org.matrix.custom.html"
         assert payload["formatted_body"] == html_content
-        # Body should be HTML-stripped
         assert "<" not in payload["body"]
-        
+
     @pytest.mark.asyncio
     async def test_send_message_reply(self):
         """Test sending reply message"""
         client = Client()
         client.restrunner = Mock()
-        client.restrunner.sendEvent.return_value = {"event_id": "$sent:matrix.org"}
-        
+        client.restrunner.sendEvent_async = AsyncMock(return_value={"event_id": "$sent:matrix.org"})
+
         await client.send_message("!room:matrix.org", "Reply text", replyTo="$original:matrix.org")
-        
-        call_args = client.restrunner.sendEvent.call_args
+
+        call_args = client.restrunner.sendEvent_async.call_args
         payload = call_args[1]["eventPayload"]
-        
+
         assert "m.relates_to" in payload
         assert payload["m.relates_to"]["m.in_reply_to"]["event_id"] == "$original:matrix.org"
 
@@ -391,27 +390,27 @@ class TestMediaOperations:
         """Test downloading media"""
         client = Client()
         client.restrunner = Mock()
-        client.restrunner.getMediaFromMXC.return_value = b"fake_image_data"
-        
+        client.restrunner.getMediaFromMXC_async = AsyncMock(return_value=b"fake_image_data")
+
         result = await client.download_media("mxc://matrix.org/abc123")
-        
-        client.restrunner.getMediaFromMXC.assert_called_once_with("mxc://matrix.org/abc123")
+
+        client.restrunner.getMediaFromMXC_async.assert_called_once_with("mxc://matrix.org/abc123")
         assert result == b"fake_image_data"
-        
+
     @pytest.mark.asyncio
     async def test_upload_media(self):
         """Test uploading media"""
         client = Client()
         client.restrunner = Mock()
-        client.restrunner.uploadMedia.return_value = {"content_uri": "mxc://matrix.org/uploaded123"}
-        
+        client.restrunner.uploadMedia_async = AsyncMock(return_value={"content_uri": "mxc://matrix.org/uploaded123"})
+
         import io
         fake_buffer = io.BytesIO(b"fake_file_data")
-        
+
         result = await client.upload_media(fake_buffer, "test.txt")
-        
-        client.restrunner.uploadMedia.assert_called_once_with(
-            fileData=fake_buffer, 
+
+        client.restrunner.uploadMedia_async.assert_called_once_with(
+            fileData=fake_buffer,
             fileName="test.txt"
         )
         assert result["content_uri"] == "mxc://matrix.org/uploaded123"
@@ -425,35 +424,35 @@ class TestFileSending:
         """Test basic file sending"""
         client = Client()
         client.restrunner = Mock()
-        client.restrunner.sendEvent.return_value = {"event_id": "$file:matrix.org"}
-        
+        client.restrunner.sendEvent_async = AsyncMock(return_value={"event_id": "$file:matrix.org"})
+
         result = await client._send_file(
             roomID="!room:matrix.org",
             body="test.txt",
             fileURL="mxc://matrix.org/file123"
         )
-        
-        call_args = client.restrunner.sendEvent.call_args
+
+        call_args = client.restrunner.sendEvent_async.call_args
         payload = call_args[1]["eventPayload"]
-        
-        assert payload["msgtype"] == "m.file"  # Default type
+
+        assert payload["msgtype"] == "m.file"
         assert payload["body"] == "test.txt"
         assert payload["url"] == "mxc://matrix.org/file123"
-        
+
     @pytest.mark.asyncio
     async def test_send_file_with_info(self):
         """Test file sending with info"""
         from halcyon.enums import msgType
-        
+
         client = Client()
         client.restrunner = Mock()
-        client.restrunner.sendEvent.return_value = {"event_id": "$file:matrix.org"}
-        
+        client.restrunner.sendEvent_async = AsyncMock(return_value={"event_id": "$file:matrix.org"})
+
         file_info = {
             "size": 1024,
             "mimetype": "text/plain"
         }
-        
+
         await client._send_file(
             roomID="!room:matrix.org",
             body="test.txt",
@@ -462,10 +461,197 @@ class TestFileSending:
             info=file_info,
             fileName="actual_file.txt"
         )
-        
-        call_args = client.restrunner.sendEvent.call_args
+
+        call_args = client.restrunner.sendEvent_async.call_args
         payload = call_args[1]["eventPayload"]
-        
+
         assert payload["msgtype"] == msgType.IMAGE
         assert payload["info"] == file_info
         assert payload["filename"] == "actual_file.txt"
+
+
+class TestSyncPipeline:
+    """Test the sync event pipeline dispatches correctly"""
+
+    def _make_sync_response(self, **kwargs):
+        """Build a minimal /sync response"""
+        resp = {"next_batch": "s1234"}
+        resp.update(kwargs)
+        return resp
+
+    @pytest.mark.asyncio
+    async def test_sync_skips_first_sync(self):
+        """First sync should be skipped when ignoreFirstSync is True"""
+        client = Client()
+        client.restrunner = Mock()
+        client.restrunner.sync_async = AsyncMock(return_value=self._make_sync_response())
+        client.ignoreFirstSync = True
+        client.firstSync = True
+
+        await client._homeserverSync()
+
+        assert client.firstSync is False
+        assert client.sinceToken == "s1234"
+
+    @pytest.mark.asyncio
+    async def test_sync_dispatches_message(self):
+        """Timeline m.room.message events dispatch to on_message"""
+        client = Client()
+        client.restrunner = Mock()
+        client.roomCache = {"rooms": {}}
+        client.restrunner.getRoomState.return_value = []
+        received = []
+
+        @client.event
+        async def on_message(msg):
+            received.append(msg)
+
+        sync_resp = self._make_sync_response(rooms={
+            "join": {
+                "!room:matrix.org": {
+                    "timeline": {
+                        "events": [{
+                            "type": "m.room.message",
+                            "sender": "@alice:matrix.org",
+                            "content": {"msgtype": "m.text", "body": "hello"},
+                            "origin_server_ts": 1000,
+                            "event_id": "$msg1"
+                        }]
+                    }
+                }
+            }
+        })
+
+        client.restrunner.sync_async = AsyncMock(return_value=sync_resp)
+        client.firstSync = False
+
+        await client._homeserverSync()
+        assert len(received) == 1
+        assert received[0].content.body == "hello"
+
+    @pytest.mark.asyncio
+    async def test_sync_dispatches_edit(self):
+        """Timeline edit events dispatch to on_message_edit"""
+        client = Client()
+        client.restrunner = Mock()
+        client.roomCache = {"rooms": {}}
+        client.restrunner.getRoomState.return_value = []
+        received = []
+
+        @client.event
+        async def on_message_edit(msg):
+            received.append(msg)
+
+        sync_resp = self._make_sync_response(rooms={
+            "join": {
+                "!room:matrix.org": {
+                    "timeline": {
+                        "events": [{
+                            "type": "m.room.message",
+                            "sender": "@alice:matrix.org",
+                            "content": {
+                                "msgtype": "m.text",
+                                "body": "* edited",
+                                "m.new_content": {"msgtype": "m.text", "body": "edited"},
+                                "m.relates_to": {"rel_type": "m.replace", "event_id": "$orig"}
+                            },
+                            "origin_server_ts": 1000,
+                            "event_id": "$edit1"
+                        }]
+                    }
+                }
+            }
+        })
+
+        client.restrunner.sync_async = AsyncMock(return_value=sync_resp)
+        client.firstSync = False
+
+        await client._homeserverSync()
+        assert len(received) == 1
+        assert received[0].edit.body == "edited"
+
+    @pytest.mark.asyncio
+    async def test_sync_dispatches_invite(self):
+        """Invite rooms dispatch to on_room_invite"""
+        client = Client()
+        client.restrunner = Mock()
+        received = []
+
+        @client.event
+        async def on_room_invite(rm):
+            received.append(rm)
+
+        sync_resp = self._make_sync_response(rooms={
+            "invite": {
+                "!invited:matrix.org": {
+                    "invite_state": {
+                        "events": [{
+                            "type": "m.room.name",
+                            "content": {"name": "Invite Room"}
+                        }]
+                    }
+                }
+            }
+        })
+
+        client.restrunner.sync_async = AsyncMock(return_value=sync_resp)
+        client.firstSync = False
+
+        await client._homeserverSync()
+        assert len(received) == 1
+        assert received[0].name == "Invite Room"
+
+    @pytest.mark.asyncio
+    async def test_sync_dispatches_leave(self):
+        """Leave rooms dispatch to on_room_leave"""
+        client = Client()
+        client.restrunner = Mock()
+        received = []
+
+        @client.event
+        async def on_room_leave(room_id):
+            received.append(room_id)
+
+        sync_resp = self._make_sync_response(rooms={
+            "leave": {"!left:matrix.org": {}}
+        })
+
+        client.restrunner.sync_async = AsyncMock(return_value=sync_resp)
+        client.firstSync = False
+
+        await client._homeserverSync()
+        assert received == ["!left:matrix.org"]
+
+    @pytest.mark.asyncio
+    async def test_sync_handles_bad_response(self):
+        """Sync with missing next_batch returns early"""
+        client = Client()
+        client.restrunner = Mock()
+        client.restrunner.sync_async = AsyncMock(return_value={})
+
+        await client._homeserverSync()
+        assert client.sinceToken == ""
+
+    @pytest.mark.asyncio
+    async def test_sync_processes_all_joined_room_streams(self):
+        """All joined room streams are iterated without error"""
+        client = Client()
+        client.restrunner = Mock()
+        client.roomCache = {"rooms": {}}
+        client.restrunner.getRoomState.return_value = []
+
+        sync_resp = self._make_sync_response(rooms={
+            "join": {
+                "!room:matrix.org": {
+                    "state": {"events": [{"type": "m.room.name", "content": {"name": "X"}}]},
+                    "timeline": {"events": []},
+                    "ephemeral": {"events": [{"type": "m.typing", "content": {}}]},
+                    "account_data": {"events": [{"type": "m.tag", "content": {}}]},
+                }
+            }
+        })
+
+        client.restrunner.sync_async = AsyncMock(return_value=sync_resp)
+        client.firstSync = False
+
+        await client._homeserverSync()
