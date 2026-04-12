@@ -223,6 +223,7 @@ class TestOnEventHook:
         client = Client()
         client.restrunner = Mock()
         client.roomCache = {"rooms": {}}
+        client.restrunner.getRoomState.return_value = []
         received = []
 
         @client.event
@@ -464,6 +465,7 @@ class TestTypedDispatch:
         client = Client()
         client.restrunner = Mock()
         client.roomCache = {"rooms": {}}
+        client.restrunner.getRoomState.return_value = []
         received = []
 
         @client.event
@@ -490,6 +492,7 @@ class TestTypedDispatch:
         client = Client()
         client.restrunner = Mock()
         client.roomCache = {"rooms": {}}
+        client.restrunner.getRoomState.return_value = []
         received = []
 
         @client.event

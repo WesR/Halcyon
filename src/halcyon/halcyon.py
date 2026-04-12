@@ -17,6 +17,7 @@ from halcyon.enums import *
 from halcyon.events import (Event, MemberEvent, ReactionEvent, RedactionEvent,
                             StickerEvent, TypingEvent, ReceiptEvent,
                             PresenceEvent, AccountDataEvent)
+from halcyon.user import User
 from halcyon.security import configure_security
 
 class Client:
@@ -186,11 +187,25 @@ class Client:
         else:
             self._addRoomToCache(roomID)
 
-            #if it doesn't populate, return an empty room
             if roomID in self.roomCache["rooms"]:
                 return self.roomCache["rooms"][roomID]
             else:
                 return room()
+
+    def _resolve_sender(self, sender_id, room_id):
+        """Build a User from room cache member data, if available."""
+        if not sender_id or not room_id:
+            return None
+        cached = self._getRoom(room_id)
+        if cached and sender_id in cached.member_details:
+            member = cached.member_details[sender_id]
+            return User(
+                id=sender_id,
+                displayname=member.displayname,
+                avatar_url=member.avatar_url,
+                membership=member.membership,
+            )
+        return User(id=sender_id)
 
     def _destruction(self):
         if self.logoutOnDeath:
@@ -287,6 +302,12 @@ class Client:
         for room_id in left_rooms:
             await self.on_room_leave(room_id)
 
+    def _enrich_event(self, ev, room_id):
+        """Attach sender_user to an event from room cache member data."""
+        if ev.sender and room_id:
+            ev.sender_user = self._resolve_sender(ev.sender, room_id)
+        return ev
+
     async def _process_timeline_event(self, event, room_id):
         event_type = event.get("type")
 
@@ -303,15 +324,16 @@ class Client:
             else:
                 await self.on_message(newMsg)
         elif event_type == "m.reaction":
-            await self.on_reaction(ReactionEvent(event, room_id=room_id, source="timeline"))
+            ev = self._enrich_event(ReactionEvent(event, room_id=room_id, source="timeline"), room_id)
+            await self.on_reaction(ev)
         elif event_type == "m.room.redaction":
-            await self.on_redaction(RedactionEvent(event, room_id=room_id, source="timeline"))
-        elif event_type == "m.sticker":
-            pass  # Fires only through on_event
+            ev = self._enrich_event(RedactionEvent(event, room_id=room_id, source="timeline"), room_id)
+            await self.on_redaction(ev)
         elif event_type == "m.room.member":
-            await self.on_room_member(MemberEvent(event, room_id=room_id, source="timeline"))
+            ev = self._enrich_event(MemberEvent(event, room_id=room_id, source="timeline"), room_id)
+            await self.on_room_member(ev)
 
-        await self.on_event(Event(event, room_id=room_id, source="timeline"))
+        await self.on_event(self._enrich_event(Event(event, room_id=room_id, source="timeline"), room_id))
 
     async def _process_state_event(self, event, room_id):
         cached_room = self._getRoom(room_id)
@@ -319,9 +341,10 @@ class Client:
             cached_room.apply_state_event(event)
 
         if event.get("type") == "m.room.member":
-            await self.on_room_member(MemberEvent(event, room_id=room_id, source="state"))
+            ev = self._enrich_event(MemberEvent(event, room_id=room_id, source="state"), room_id)
+            await self.on_room_member(ev)
 
-        await self.on_event(Event(event, room_id=room_id, source="state"))
+        await self.on_event(self._enrich_event(Event(event, room_id=room_id, source="state"), room_id))
 
     async def _process_ephemeral_event(self, event, room_id):
         event_type = event.get("type")

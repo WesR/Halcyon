@@ -7,7 +7,7 @@ common Matrix event families.
 
 from pydantic import BaseModel, PrivateAttr
 from typing import Optional, Dict, Any, List
-from halcyon.security import get_nested_config
+from halcyon.security import get_nested_config, get_message_config
 
 
 class Event(BaseModel):
@@ -18,7 +18,7 @@ class Event(BaseModel):
     event can also be consumed through this base representation via the
     ``on_event`` callback.
     """
-    model_config = get_nested_config()
+    model_config = get_message_config()
 
     type: Optional[str] = None
     sender: Optional[str] = None
@@ -29,6 +29,7 @@ class Event(BaseModel):
     content: Optional[Dict[str, Any]] = None
     unsigned: Optional[Dict[str, Any]] = None
     source: Optional[str] = None
+    sender_user: Optional[Any] = None  # User object when available
     _raw: Optional[Dict[str, Any]] = PrivateAttr(default_factory=dict)
 
     def __init__(self, raw_event: Optional[Dict[str, Any]] = None,
