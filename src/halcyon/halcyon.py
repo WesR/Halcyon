@@ -14,7 +14,9 @@ import halcyon.restrunner
 from halcyon.message import *
 from halcyon.room import *
 from halcyon.enums import *
-from halcyon.events import Event
+from halcyon.events import (Event, MemberEvent, ReactionEvent, RedactionEvent,
+                            StickerEvent, TypingEvent, ReceiptEvent,
+                            PresenceEvent, AccountDataEvent)
 from halcyon.security import configure_security
 
 class Client:
@@ -300,6 +302,14 @@ class Client:
                 await self.on_message_edit(newMsg)
             else:
                 await self.on_message(newMsg)
+        elif event_type == "m.reaction":
+            await self.on_reaction(ReactionEvent(event, room_id=room_id, source="timeline"))
+        elif event_type == "m.room.redaction":
+            await self.on_redaction(RedactionEvent(event, room_id=room_id, source="timeline"))
+        elif event_type == "m.sticker":
+            pass  # Fires only through on_event
+        elif event_type == "m.room.member":
+            await self.on_room_member(MemberEvent(event, room_id=room_id, source="timeline"))
 
         await self.on_event(Event(event, room_id=room_id, source="timeline"))
 
@@ -307,6 +317,10 @@ class Client:
         cached_room = self._getRoom(room_id)
         if cached_room:
             cached_room.apply_state_event(event)
+
+        if event.get("type") == "m.room.member":
+            await self.on_room_member(MemberEvent(event, room_id=room_id, source="state"))
+
         await self.on_event(Event(event, room_id=room_id, source="state"))
 
     async def _process_ephemeral_event(self, event, room_id):
@@ -574,6 +588,18 @@ class Client:
 
     async def on_room_leave(self, roomID):
         """on room leave passes room id"""
+        pass
+
+    async def on_reaction(self, event):
+        """Fired for m.reaction events. Receives a ReactionEvent."""
+        pass
+
+    async def on_redaction(self, event):
+        """Fired for m.room.redaction events. Receives a RedactionEvent."""
+        pass
+
+    async def on_room_member(self, event):
+        """Fired for m.room.member state changes. Receives a MemberEvent."""
         pass
 
     async def on_event(self, event):
