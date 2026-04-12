@@ -12,14 +12,14 @@ Ask questions in the matrix chat [#halcyon:blackline.xyz](https://matrix.to/#/#h
 - Typed event hooks for common events, plus a generic `on_event` fallback for everything else
 - Event hooks
     - `on_ready()` — bot is online and ready
-    - `on_message(message)` — new room message
+    - `on_message(message)` — message-like timeline content (`m.room.message` and `m.sticker`)
     - `on_message_edit(message)` — edited room message
     - `on_reaction(event)` — `m.reaction` events
     - `on_redaction(event)` — `m.room.redaction` events
     - `on_room_member(event)` — membership changes (join, leave, ban, invite, knock)
     - `on_room_invite(room)` — invited to a room
     - `on_room_leave(roomID)` — left or kicked from a room
-    - `on_event(event)` — fires for every sync event (typed and untyped)
+    - `on_event(event)` — fires for every Matrix event object present in `/sync`
 - Action hooks
     - `send_message(roomID, body, textFormat, replyTo, isNotice)`
     - `send_typing(roomID, seconds)`

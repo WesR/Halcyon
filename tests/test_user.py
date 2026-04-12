@@ -126,3 +126,38 @@ class TestSenderEnrichment:
         assert received[0].sender_user is not None
         assert received[0].sender_user.id == "@unknown:m.org"
         assert received[0].sender_user.displayname is None
+
+    @pytest.mark.asyncio
+    async def test_live_state_updates_work_for_falsey_cached_room(self):
+        """A placeholder room should still accept live state updates and enrich later events"""
+        client = Client()
+        client.restrunner = Mock()
+        client.roomCache = {"rooms": {"!r:m.org": room(roomID="!r:m.org")}}
+        received = []
+
+        @client.event
+        async def on_event(ev):
+            received.append(ev)
+
+        sync = self._sync(rooms={"join": {"!r:m.org": {
+            "state": {"events": [{
+                "type": "m.room.member",
+                "state_key": "@alice:m.org",
+                "content": {"membership": "join", "displayname": "Alice"}
+            }]},
+            "timeline": {"events": [{
+                "type": "m.room.message",
+                "sender": "@alice:m.org",
+                "content": {"msgtype": "m.text", "body": "hi"},
+                "origin_server_ts": 1000,
+                "event_id": "$m1"
+            }]}
+        }}})
+
+        client.restrunner.sync_async = AsyncMock(return_value=sync)
+        client.firstSync = False
+        await client._homeserverSync()
+
+        assert len(received) == 2
+        assert received[-1].sender_user is not None
+        assert received[-1].sender_user.displayname == "Alice"

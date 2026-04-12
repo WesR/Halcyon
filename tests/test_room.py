@@ -318,14 +318,25 @@ class TestRoomDefaults:
     """Test default values according to Matrix spec"""
     
     def test_room_version_default(self):
-        """Test room version defaults to 1"""
+        """Test room version defaults to string 1"""
         events = [{
             "type": "m.room.create",
             "content": {"creator": "@user:matrix.org"}  # No room_version
         }]
         
         test_room = room(events, "!test:matrix.org")
-        assert test_room.version == 1  # Default per spec
+        assert test_room.version == "1"  # Default per spec
+
+    def test_room_creator_falls_back_to_sender(self):
+        """Modern room create events may omit content.creator"""
+        events = [{
+            "type": "m.room.create",
+            "sender": "@user:matrix.org",
+            "content": {"room_version": "12"}
+        }]
+
+        test_room = room(events, "!test:matrix.org")
+        assert test_room.creator == "@user:matrix.org"
         
     def test_federate_default(self):
         """Test m.federate defaults to True"""
@@ -715,8 +726,22 @@ class TestLiveStateUpdates:
             "content": {"membership": "ban", "reason": "spam"}
         })
         assert "@bad:m.org" not in r.members
-        assert "@bad:m.org" in r.left
+        assert "@bad:m.org" not in r.left
+        assert "@bad:m.org" in r.banned
         assert r.member_details["@bad:m.org"].reason == "spam"
+
+    def test_apply_member_knock(self):
+        r = room([], "!r:m.org")
+
+        r.apply_state_event({
+            "type": "m.room.member",
+            "state_key": "@visitor:m.org",
+            "content": {"membership": "knock", "reason": "please"}
+        })
+        assert "@visitor:m.org" in r.knocked
+        assert "@visitor:m.org" not in r.members
+        assert "@visitor:m.org" not in r.left
+        assert "@visitor:m.org" not in r.invited
 
     def test_apply_encryption(self):
         r = room([], "!r:m.org")

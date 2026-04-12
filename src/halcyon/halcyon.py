@@ -48,6 +48,7 @@ class Client:
         self.firstSync = True
         self.revokeSessionTokenOnExit = False
         self.security_mode = security_mode
+        self.auth_type = None
 
         self.roomCache = dict()
         self._cache_lock = None  # Will be initialized in async context
@@ -109,6 +110,7 @@ class Client:
 
             resp = self.restrunner.whoami()
             if "errcode" not in resp:
+                self.auth_type = "token"
                 return
             else:
                 logging.error("error logging in with token")
@@ -116,13 +118,15 @@ class Client:
         if userID and password:
             if homeserver:
                 self.restrunner = halcyon.restrunner.Runner(homeserver=homeserver, user_id=userID)
-                client._generateNewSessionToken(userID, password)
-                self.logoutOnDeath = True
-                #TODO: state.json file
-                #accepts file location, we write state info there, and load data from it
-                #if can write to disk, leave session open
-                #else kill session on client unload
-                return
+                resp = self._generateNewSessionToken(userID, password)
+                if "errcode" not in resp:
+                    self.auth_type = "password"
+                    self.logoutOnDeath = True
+                    #TODO: state.json file
+                    #accepts file location, we write state info there, and load data from it
+                    #if can write to disk, leave session open
+                    #else kill session on client unload
+                    return
 
         logging.error("No valid login method found. Sudoku")
         exit(1)
@@ -193,8 +197,8 @@ class Client:
         """Build a User from room cache member data, if available."""
         if not sender_id or not room_id:
             return None
-        cached = self._getRoom(room_id)
-        if cached and sender_id in cached.member_details:
+        cached = self._ensure_cached_room(room_id)
+        if sender_id in cached.member_details:
             member = cached.member_details[sender_id]
             return User(
                 id=sender_id,
@@ -203,6 +207,23 @@ class Client:
                 membership=member.membership,
             )
         return User(id=sender_id)
+
+    def _ensure_cached_room(self, room_id):
+        """Return a cache entry for the room, creating a placeholder if needed."""
+        if "rooms" not in self.roomCache:
+            self.roomCache["rooms"] = {}
+
+        if room_id not in self.roomCache["rooms"]:
+            self._addRoomToCache(room_id)
+
+        cached_room = self.roomCache["rooms"].get(room_id)
+        if cached_room is None:
+            cached_room = room(roomID=room_id)
+            self.roomCache["rooms"][room_id] = cached_room
+        elif cached_room.id is None:
+            cached_room.id = room_id
+
+        return cached_room
 
     def _destruction(self):
         if self.logoutOnDeath:
@@ -265,6 +286,8 @@ class Client:
                 await self._process_joined_rooms(rooms["join"])
             if "invite" in rooms:
                 await self._process_invited_rooms(rooms["invite"])
+            if "knock" in rooms:
+                await self._process_knocked_rooms(rooms["knock"])
             if "leave" in rooms:
                 await self._process_left_rooms(rooms["leave"])
 
@@ -294,9 +317,25 @@ class Client:
             if events:
                 newRoom = room(rawEvents=events, roomID=room_id)
                 await self.on_room_invite(newRoom)
+                for event in events:
+                    await self.on_event(Event(event, room_id=room_id, source="invite_state"))
+
+    async def _process_knocked_rooms(self, knocked_rooms):
+        for room_id, room_data in knocked_rooms.items():
+            events = []
+            if "knock_state" in room_data:
+                events = room_data["knock_state"].get("events", [])
+            for event in events:
+                await self.on_event(Event(event, room_id=room_id, source="knock_state"))
 
     async def _process_left_rooms(self, left_rooms):
-        for room_id in left_rooms:
+        for room_id, room_data in left_rooms.items():
+            for event in room_data.get("state", {}).get("events", []):
+                await self.on_event(Event(event, room_id=room_id, source="leave_state"))
+            for event in room_data.get("timeline", {}).get("events", []):
+                await self.on_event(Event(event, room_id=room_id, source="leave_timeline"))
+            for event in room_data.get("account_data", {}).get("events", []):
+                await self.on_event(AccountDataEvent(event, room_id=room_id, source="leave_account_data"))
             await self.on_room_leave(room_id)
 
     def _enrich_event(self, ev, room_id):
@@ -307,19 +346,22 @@ class Client:
 
     async def _process_timeline_event(self, event, room_id):
         event_type = event.get("type")
+        cached_room = self._ensure_cached_room(room_id)
 
         # Timeline events with state_key are state changes; apply to cache
         if "state_key" in event:
-            cached_room = self._getRoom(room_id)
-            if cached_room:
-                cached_room.apply_state_event(event)
+            cached_room.apply_state_event(event)
 
         if event_type == "m.room.message":
-            newMsg = message(event, self._getRoom(room_id))
+            newMsg = message(event, cached_room)
             if newMsg.edit:
                 await self.on_message_edit(newMsg)
             else:
                 await self.on_message(newMsg)
+        elif event_type == "m.sticker":
+            await self.on_message(message(event, cached_room))
+            await self.on_event(self._enrich_event(StickerEvent(event, room_id=room_id, source="timeline"), room_id))
+            return
         elif event_type == "m.reaction":
             ev = self._enrich_event(ReactionEvent(event, room_id=room_id, source="timeline"), room_id)
             await self.on_reaction(ev)
@@ -333,9 +375,8 @@ class Client:
         await self.on_event(self._enrich_event(Event(event, room_id=room_id, source="timeline"), room_id))
 
     async def _process_state_event(self, event, room_id):
-        cached_room = self._getRoom(room_id)
-        if cached_room:
-            cached_room.apply_state_event(event)
+        cached_room = self._ensure_cached_room(room_id)
+        cached_room.apply_state_event(event)
 
         if event.get("type") == "m.room.member":
             ev = self._enrich_event(MemberEvent(event, room_id=room_id, source="state"), room_id)
@@ -571,13 +612,14 @@ class Client:
         """
             Get comprehensive bot information
 
-            @return Dict containing user_id, device_id, and homeserver
+            @return Dict containing user_id, device_id, auth_type, and homeserver
         """
         if not self.restrunner:
-            return {"user_id": None, "device_id": None, "homeserver": None}
+            return {"user_id": None, "device_id": None, "auth_type": None, "homeserver": None}
         return {
             "user_id": self.restrunner.USER_ID,
             "device_id": self.restrunner.DEVICE_ID,
+            "auth_type": self.auth_type,
             "homeserver": self.restrunner.HOMESERVER,
         }
 

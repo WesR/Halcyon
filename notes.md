@@ -86,6 +86,10 @@ struct:
 - [x] Add tests per event family instead of only per object parser
 - [x] Expand docs around event coverage, guarantees, and unsupported behavior
 - [x] Update old spec references to the current Matrix spec version instead of `r0.6.1`
+- `on_message` now handles message-like timeline content, including `m.sticker`
+- `on_event` should be treated as the fallback for all Matrix event objects present in `/sync`
+- `room.left` now tracks actual `leave` membership only
+- `room.banned` and `room.knocked` are now tracked separately
 
 ## R3
 - [ ] serverside account data utils https://spec.matrix.org/latest/client-server-api/#put_matrixclientv3useruseridaccount_datatype

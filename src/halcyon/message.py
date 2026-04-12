@@ -193,7 +193,7 @@ class MessageContent(BaseModel):
                         self.__dict__[key] = value
         else:
             super().__init__(**kwargs)
-            self._raw = {}
+            self._raw = dict(kwargs) if kwargs else {}
     
     def __bool__(self):
         return bool(self._raw)
@@ -261,7 +261,16 @@ class Message(BaseModel):
         if rawMessage:
             # Parse the message
             event_obj = IdReturn(rawMessage.get("event_id"))
-            content_obj = MessageContent(rawMessage.get("content"))
+            raw_content = rawMessage.get("content", {})
+            if rawMessage.get("type") == "m.sticker":
+                content_obj = MessageContent(
+                    body=raw_content.get("body"),
+                    url=raw_content.get("url"),
+                    info=FileInfo(raw_content.get("info")) if raw_content.get("info") else None,
+                )
+                content_obj._raw = raw_content
+            else:
+                content_obj = MessageContent(raw_content)
             edit_obj = MessageContent(rawMessage.get("content", {}).get("m.new_content")) if rawMessage.get("content", {}).get("m.new_content") else None
             relates_obj = Relates(rawMessage.get("content", {}).get("m.relates_to")) if rawMessage.get("content", {}).get("m.relates_to") else None
             
@@ -285,6 +294,10 @@ class Message(BaseModel):
     
     def __bool__(self):
         return self._hasData
+
+    @property
+    def is_sticker(self):
+        return self.type == "m.sticker"
 
 
 # Create compatibility aliases for the old nested class structure

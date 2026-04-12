@@ -110,7 +110,7 @@ if __name__ == '__main__':
     + @param `generate_thumbnail` Bool Set to true to automatically downsize images over 640x640. Defaults True
 + `client.get_bot_info`
     + Get comprehensive bot information
-    + @return Dict containing user_id, device_id, and homeserver
+    + @return Dict containing user_id, device_id, auth_type, and homeserver
 
 ## halcyon event handlers
 
@@ -119,7 +119,7 @@ Halcyon provides typed hooks for common events and a generic fallback for everyt
 + `async def on_ready():`
     + Called after login, right before we start handling messages.
 + `async def on_message(message):`
-    + Called for each new `m.room.message` event (not edits). Receives a `message` object.
+    + Called for message-like timeline content. Right now this includes `m.room.message` and `m.sticker`. Receives a unified `message` object.
 + `async def on_message_edit(message):`
     + Called when a message is edited (has `m.relates_to` with `rel_type: m.replace`).
 + `async def on_reaction(event):`
@@ -133,7 +133,7 @@ Halcyon provides typed hooks for common events and a generic fallback for everyt
 + `async def on_room_leave(roomID):`
     + Called when you leave a room (or are kicked). Receives the room ID string.
 + `async def on_event(event):`
-    + Generic fallback — fires for every sync event, including events handled by typed hooks above. Receives an `Event` (or typed subclass for presence, typing, receipts, account data). Use this to observe event types that don't have a dedicated hook.
+    + fires for every Matrix event object present in `/sync`, including events handled by typed hooks above. Receives an `Event` (or typed subclass for stickers, presence, typing, receipts, account data, and other supported families). Use this to observe event types that don't have a dedicated hook.
 
 ### Dispatch order
 1. Room state events update the room cache **before** any hook fires.
@@ -148,10 +148,12 @@ Halcyon provides typed hooks for common events and a generic fallback for everyt
 | `m.reaction` | `ReactionEvent` | `on_reaction` | timeline |
 | `m.room.redaction` | `RedactionEvent` | `on_redaction` | timeline |
 | `m.room.member` | `MemberEvent` | `on_room_member` | timeline, state |
-| `m.sticker` | `StickerEvent` | `on_event` | timeline |
+| `m.sticker` | `message` + `StickerEvent` | `on_message` + `on_event` | timeline |
 | `m.typing` | `TypingEvent` | `on_event` | ephemeral |
 | `m.receipt` | `ReceiptEvent` | `on_event` | ephemeral |
 | `m.presence` | `PresenceEvent` | `on_event` | presence |
+| invite/knock stripped state | `Event` | `on_event` | invite_state, knock_state |
+| leave room event objects | `Event` / `AccountDataEvent` | `on_event` | leave_state, leave_timeline, leave_account_data |
 | account data | `AccountDataEvent` | `on_event` | account_data |
 | all other types | `Event` | `on_event` | varies |
 
@@ -202,6 +204,8 @@ async def on_message(message):
     message.room.members #list, all the room members that have joined
     message.room.left #list, all of the users who have left
     message.room.invited #list, all of the users who have been invited but not joined
+    message.room.banned #list, all of the users who are currently banned
+    message.room.knocked #list, all of the users who have knocked but not joined
     
     # Detailed member information (New comprehensive support)
     member = message.room.member_details["@user:matrix.org"]  # Get detailed member info
@@ -256,6 +260,10 @@ async def on_message(message):
     # m.room.tombstone
     message.room.tombstone_body #human-readable reason the room was replaced
     message.room.tombstone_replacement_room #room ID of the replacement room
+
+    # Message-like helpers
+    message.type # "m.room.message" or "m.sticker"
+    message.is_sticker #True for sticker timeline events
 ```
 
 

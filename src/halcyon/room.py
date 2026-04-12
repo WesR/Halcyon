@@ -306,6 +306,8 @@ class Room(BaseModel):
     members: List[str] = []  # Simple list for backward compatibility
     left: List[str] = []
     invited: List[str] = []
+    banned: List[str] = []
+    knocked: List[str] = []
     member_details: Dict[str, RoomMember] = {}  # Detailed member information
     
     # m.room.power_levels
@@ -362,8 +364,8 @@ class Room(BaseModel):
         content = event.get("content", {})
 
         if event_type == "m.room.create":
-            self.creator = content.get("creator")
-            self.version = content.get("room_version", 1)
+            self.creator = content.get("creator") or event.get("sender")
+            self.version = content.get("room_version", "1")
             self.federated = content.get("m.federate", True)
             self.room_type = content.get("type")
             self.additional_creators = content.get("additional_creators", [])
@@ -432,6 +434,8 @@ class Room(BaseModel):
         members = list(self.members)
         left = list(self.left)
         invited = list(self.invited)
+        banned = list(self.banned)
+        knocked = list(self.knocked)
 
         if user_id in members:
             members.remove(user_id)
@@ -439,17 +443,27 @@ class Room(BaseModel):
             left.remove(user_id)
         if user_id in invited:
             invited.remove(user_id)
+        if user_id in banned:
+            banned.remove(user_id)
+        if user_id in knocked:
+            knocked.remove(user_id)
 
         if membership == "join":
             members.append(user_id)
-        elif membership == "leave" or membership == "ban":
+        elif membership == "leave":
             left.append(user_id)
+        elif membership == "ban":
+            banned.append(user_id)
         elif membership == "invite":
             invited.append(user_id)
+        elif membership == "knock":
+            knocked.append(user_id)
 
         self.members = members
         self.left = left
         self.invited = invited
+        self.banned = banned
+        self.knocked = knocked
     
     def __bool__(self):
         return self._hasData

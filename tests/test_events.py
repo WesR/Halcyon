@@ -218,6 +218,52 @@ class TestOnEventHook:
         assert len(events) == 1
 
     @pytest.mark.asyncio
+    async def test_sticker_fires_on_message_and_on_event(self):
+        client = Client()
+        client.restrunner = Mock()
+        client.roomCache = {"rooms": {}}
+        client.restrunner.getRoomState.return_value = []
+        messages = []
+        events = []
+
+        @client.event
+        async def on_message(msg):
+            messages.append(msg)
+
+        @client.event
+        async def on_event(ev):
+            events.append(ev)
+
+        sync_resp = self._make_sync_response(rooms={
+            "join": {
+                "!room:matrix.org": {
+                    "timeline": {
+                        "events": [{
+                            "type": "m.sticker",
+                            "sender": "@a:m.org",
+                            "content": {
+                                "body": "party parrot",
+                                "url": "mxc://m.org/sticker1",
+                                "info": {"mimetype": "image/png", "w": 128, "h": 128}
+                            },
+                            "origin_server_ts": 1000,
+                            "event_id": "$s1"
+                        }]
+                    }
+                }
+            }
+        })
+
+        client.restrunner.sync_async = AsyncMock(return_value=sync_resp)
+        client.firstSync = False
+
+        await client._homeserverSync()
+        assert len(messages) == 1
+        assert messages[0].is_sticker is True
+        assert len(events) == 1
+        assert isinstance(events[0], StickerEvent)
+
+    @pytest.mark.asyncio
     async def test_unsupported_event_still_fires_on_event(self):
         """Unknown event types should still be observable via on_event"""
         client = Client()

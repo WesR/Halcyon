@@ -355,6 +355,32 @@ class TestRelates:
 
 class TestNewMessageTypes:
     """Test new Matrix message types and fields"""
+
+    def test_sticker_as_message_like_content(self):
+        """Sticker events should populate the message object for on_message"""
+        sticker_event = {
+            "type": "m.sticker",
+            "sender": "@user:matrix.org",
+            "content": {
+                "body": "party parrot",
+                "url": "mxc://matrix.org/sticker123",
+                "info": {
+                    "mimetype": "image/png",
+                    "w": 128,
+                    "h": 128,
+                    "size": 1024
+                }
+            },
+            "origin_server_ts": 1632894724739,
+            "event_id": "$sticker:matrix.org"
+        }
+
+        msg = Message(sticker_event)
+        assert msg.is_sticker is True
+        assert msg.content.body == "party parrot"
+        assert msg.content.url == "mxc://matrix.org/sticker123"
+        assert msg.content.info.width == 128
+        assert msg.content.info.height == 128
     
     def test_location_message(self):
         """Test location message type"""

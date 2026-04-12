@@ -602,6 +602,68 @@ class TestSyncPipeline:
         assert received[0].name == "Invite Room"
 
     @pytest.mark.asyncio
+    async def test_invite_events_also_fire_on_event(self):
+        client = Client()
+        client.restrunner = Mock()
+        received = []
+
+        @client.event
+        async def on_event(ev):
+            received.append(ev)
+
+        sync_resp = self._make_sync_response(rooms={
+            "invite": {
+                "!invited:matrix.org": {
+                    "invite_state": {
+                        "events": [{
+                            "type": "m.room.name",
+                            "content": {"name": "Invite Room"}
+                        }]
+                    }
+                }
+            }
+        })
+
+        client.restrunner.sync_async = AsyncMock(return_value=sync_resp)
+        client.firstSync = False
+
+        await client._homeserverSync()
+        assert len(received) == 1
+        assert received[0].source == "invite_state"
+        assert received[0].room_id == "!invited:matrix.org"
+
+    @pytest.mark.asyncio
+    async def test_knock_events_fire_on_event(self):
+        client = Client()
+        client.restrunner = Mock()
+        received = []
+
+        @client.event
+        async def on_event(ev):
+            received.append(ev)
+
+        sync_resp = self._make_sync_response(rooms={
+            "knock": {
+                "!knocked:matrix.org": {
+                    "knock_state": {
+                        "events": [{
+                            "type": "m.room.name",
+                            "content": {"name": "Knock Room"}
+                        }]
+                    }
+                }
+            }
+        })
+
+        client.restrunner.sync_async = AsyncMock(return_value=sync_resp)
+        client.firstSync = False
+
+        await client._homeserverSync()
+        assert len(received) == 1
+        assert received[0].source == "knock_state"
+        assert received[0].room_id == "!knocked:matrix.org"
+
+    @pytest.mark.asyncio
     async def test_sync_dispatches_leave(self):
         """Leave rooms dispatch to on_room_leave"""
         client = Client()
@@ -621,6 +683,90 @@ class TestSyncPipeline:
 
         await client._homeserverSync()
         assert received == ["!left:matrix.org"]
+
+    @pytest.mark.asyncio
+    async def test_leave_events_also_fire_on_event(self):
+        client = Client()
+        client.restrunner = Mock()
+        received = []
+
+        @client.event
+        async def on_event(ev):
+            received.append(ev)
+
+        sync_resp = self._make_sync_response(rooms={
+            "leave": {
+                "!left:matrix.org": {
+                    "timeline": {
+                        "events": [{
+                            "type": "m.room.member",
+                            "state_key": "@user:matrix.org",
+                            "content": {"membership": "leave"}
+                        }]
+                    }
+                }
+            }
+        })
+
+        client.restrunner.sync_async = AsyncMock(return_value=sync_resp)
+        client.firstSync = False
+
+        await client._homeserverSync()
+        assert len(received) == 1
+        assert received[0].source == "leave_timeline"
+        assert received[0].room_id == "!left:matrix.org"
+
+    @pytest.mark.asyncio
+    async def test_sync_dispatches_sticker_to_on_message(self):
+        client = Client()
+        client.restrunner = Mock()
+        client.roomCache = {"rooms": {}}
+        client.restrunner.getRoomState.return_value = []
+        received = []
+
+        @client.event
+        async def on_message(msg):
+            received.append(msg)
+
+        sync_resp = self._make_sync_response(rooms={
+            "join": {
+                "!room:matrix.org": {
+                    "timeline": {
+                        "events": [{
+                            "type": "m.sticker",
+                            "sender": "@alice:matrix.org",
+                            "content": {
+                                "body": "party parrot",
+                                "url": "mxc://matrix.org/sticker123",
+                                "info": {"mimetype": "image/png", "w": 128, "h": 128}
+                            },
+                            "origin_server_ts": 1000,
+                            "event_id": "$sticker1"
+                        }]
+                    }
+                }
+            }
+        })
+
+        client.restrunner.sync_async = AsyncMock(return_value=sync_resp)
+        client.firstSync = False
+
+        await client._homeserverSync()
+        assert len(received) == 1
+        assert received[0].is_sticker is True
+        assert received[0].content.body == "party parrot"
+
+    def test_get_bot_info_includes_auth_type(self):
+        client = Client()
+        client.restrunner = Mock()
+        client.restrunner.USER_ID = "@bot:matrix.org"
+        client.restrunner.DEVICE_ID = "DEVICE"
+        client.restrunner.HOMESERVER = "https://matrix.org"
+        client.auth_type = "token"
+
+        info = client.get_bot_info()
+        assert info["auth_type"] == "token"
+        assert info["user_id"] == "@bot:matrix.org"
 
     @pytest.mark.asyncio
     async def test_sync_handles_bad_response(self):
