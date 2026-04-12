@@ -287,6 +287,17 @@ class Runner:
         return self._get("account/whoami")
 
 
+    def getUserProfile(self, userID):
+        """
+        Get the specified user's Matrix profile.
+
+        @param userID String full Matrix user ID
+
+        @return dict profile object
+        """
+        endpoint = "profile/" + userID
+        return self._get(endpoint=endpoint)
+
     def getUserPresence(self, userID=None):
         """
         Get the specified users current status / presence info

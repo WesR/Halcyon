@@ -5,6 +5,8 @@ from unittest.mock import Mock, AsyncMock, patch, MagicMock
 from halcyon.halcyon import Client
 from halcyon.message import message
 from halcyon.room import room
+from halcyon.events import PresenceEvent
+from halcyon.user import User
 
 
 class TestClient:
@@ -801,3 +803,121 @@ class TestSyncPipeline:
         client.firstSync = False
 
         await client._homeserverSync()
+
+
+class TestGetUserPresence:
+    """Test client.get_user_presence()"""
+
+    @pytest.mark.asyncio
+    async def test_get_user_presence_returns_presence_event(self):
+        client = Client()
+        client.restrunner = Mock()
+        client.restrunner.getUserPresence.return_value = {
+            "presence": "online",
+            "status_msg": "Making cupcakes",
+            "currently_active": True,
+            "last_active_ago": 500,
+        }
+        client.restrunner.USER_ID = "@bot:matrix.org"
+
+        result = await client.get_user_presence("@alice:matrix.org")
+
+        assert isinstance(result, PresenceEvent)
+        assert result.presence == "online"
+        assert result.status_msg == "Making cupcakes"
+        assert result.currently_active is True
+        assert result.last_active_ago == 500
+        assert result.sender == "@alice:matrix.org"
+        assert result.type == "m.presence"
+        client.restrunner.getUserPresence.assert_called_once_with(userID="@alice:matrix.org")
+
+    @pytest.mark.asyncio
+    async def test_get_user_presence_defaults_to_logged_in_user(self):
+        client = Client()
+        client.restrunner = Mock()
+        client.restrunner.getUserPresence.return_value = {
+            "presence": "unavailable",
+        }
+        client.restrunner.USER_ID = "@bot:matrix.org"
+
+        result = await client.get_user_presence()
+
+        assert isinstance(result, PresenceEvent)
+        assert result.sender == "@bot:matrix.org"
+        assert result.presence == "unavailable"
+        client.restrunner.getUserPresence.assert_called_once_with(userID=None)
+
+    @pytest.mark.asyncio
+    async def test_get_user_presence_passes_through_errors(self):
+        client = Client()
+        client.restrunner = Mock()
+        client.restrunner.getUserPresence.return_value = {
+            "errcode": "M_FORBIDDEN",
+            "error": "You are not allowed to see their presence",
+        }
+        client.restrunner.USER_ID = "@bot:matrix.org"
+
+        result = await client.get_user_presence("@secret:matrix.org")
+
+        assert isinstance(result, dict)
+        assert result["errcode"] == "M_FORBIDDEN"
+
+
+class TestGetUserProfile:
+    """Test client.get_user_profile()"""
+
+    @pytest.mark.asyncio
+    async def test_get_user_profile_returns_user(self):
+        client = Client()
+        client.restrunner = Mock()
+        client.restrunner.getUserProfile.return_value = {
+            "displayname": "Alice",
+            "avatar_url": "mxc://matrix.org/abc123",
+        }
+
+        result = await client.get_user_profile("@alice:matrix.org")
+
+        assert isinstance(result, User)
+        assert result.displayname == "Alice"
+        assert result.avatar_url == "mxc://matrix.org/abc123"
+        client.restrunner.getUserProfile.assert_called_once_with("@alice:matrix.org")
+
+    @pytest.mark.asyncio
+    async def test_get_user_profile_sets_user_id_from_argument(self):
+        client = Client()
+        client.restrunner = Mock()
+        client.restrunner.getUserProfile.return_value = {
+            "displayname": "Bob",
+        }
+
+        result = await client.get_user_profile("@bob:example.com")
+
+        assert result.id == "@bob:example.com"
+
+    @pytest.mark.asyncio
+    async def test_get_user_profile_missing_fields_are_none(self):
+        client = Client()
+        client.restrunner = Mock()
+        client.restrunner.getUserProfile.return_value = {}
+
+        result = await client.get_user_profile("@minimal:matrix.org")
+
+        assert isinstance(result, User)
+        assert result.id == "@minimal:matrix.org"
+        assert result.displayname is None
+        assert result.avatar_url is None
+        assert result.membership is None
+
+    @pytest.mark.asyncio
+    async def test_get_user_profile_passes_through_errors(self):
+        client = Client()
+        client.restrunner = Mock()
+        client.restrunner.getUserProfile.return_value = {
+            "errcode": "M_NOT_FOUND",
+            "error": "User not found",
+        }
+
+        result = await client.get_user_profile("@nobody:matrix.org")
+
+        assert isinstance(result, dict)
+        assert result["errcode"] == "M_NOT_FOUND"

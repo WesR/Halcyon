@@ -28,6 +28,8 @@ Ask questions in the matrix chat [#halcyon:blackline.xyz](https://matrix.to/#/#h
     - `download_media(mxc)`
     - `upload_media(fileBuffer, fileName)`
     - `send_image(roomID, fileBuffer, fileName, generate_blurhash, generate_thumbnail)`
+    - `get_user_presence(userID=None)` — returns `PresenceEvent`
+    - `get_user_profile(userID)` — returns `User`
 - Live room cache updated from sync state events
 - Typed event models: `Event`, `MemberEvent`, `ReactionEvent`, `RedactionEvent`, `StickerEvent`, `TypingEvent`, `ReceiptEvent`, `PresenceEvent`, `AccountDataEvent`
 - `User` model with sender enrichment on events (`event.sender_user`)

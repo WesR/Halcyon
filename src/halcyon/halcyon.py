@@ -608,6 +608,39 @@ class Client:
         """
         return(await self.restrunner.uploadMedia_async(fileData=fileBuffer, fileName=fileName))
 
+    async def get_user_presence(self, userID=None):
+        """
+        Get a user's current presence/status information.
+
+        @param userID String OPTIONAL full Matrix user ID. Defaults to the logged in bot user.
+        @return PresenceEvent or error dict
+        """
+        resp = self.restrunner.getUserPresence(userID=userID)
+        if isinstance(resp, dict) and "errcode" in resp:
+            return resp
+        raw = {
+            "type": "m.presence",
+            "sender": userID or self.restrunner.USER_ID,
+            "content": resp,
+        }
+        return PresenceEvent(raw)
+
+    async def get_user_profile(self, userID):
+        """
+        Get a user's profile information.
+
+        @param userID String full Matrix user ID
+        @return User or error dict
+        """
+        resp = self.restrunner.getUserProfile(userID)
+        if isinstance(resp, dict) and "errcode" in resp:
+            return resp
+        return User(
+            id=userID,
+            displayname=resp.get("displayname"),
+            avatar_url=resp.get("avatar_url"),
+        )
+
     def get_bot_info(self):
         """
             Get comprehensive bot information

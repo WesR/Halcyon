@@ -102,17 +102,17 @@ struct:
 - [ ] read/write server datastore
 - [ ] datastore key in token
 - [ ] warn log when token doesn't cant support encryption
-- [x] bot info (user id, client token, auth type)
+- [x] bot info (user id, device id, auth type, homeserver)
 - [x] fix async issues that lock the bot while longpolling
 
 ## R4 / Future 
 - [ ] post video messages
 - [ ] post file messages
 - [ ] post audio messages
-- [ ] user object
-- [ ] get user presence/status
-- [ ] get user image
-- [ ] get user nick
+- [x] user object
+- [x] get user presence/status
+- [x] get user image
+- [x] get user nick
 - [ ] search for user
 - [ ] leave room
 - [ ] list rooms

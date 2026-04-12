@@ -108,6 +108,28 @@ if __name__ == '__main__':
     + @param `fileName` String the file name of the file
     + @param `generate_blurhash` Bool Generate a Blurhash for the image. This is a blur used as filler while the image loads. Defaults True
     + @param `generate_thumbnail` Bool Set to true to automatically downsize images over 640x640. Defaults True
++ `client.get_user_presence`
+    + Get a user's current presence/status information.
+    + @param `userID` String OPTIONAL full Matrix user ID. Defaults to the logged in bot user.
+    + @return `PresenceEvent` with `presence`, `status_msg`, `currently_active`, `last_active_ago`
+    + If the homeserver returns an error, the raw error dict is returned instead.
+    + example:
+    ```python
+    presence = await client.get_user_presence("@alice:example.org")
+    print(presence.presence)      # "online" / "offline" / "unavailable"
+    print(presence.status_msg)    # optional status message
+    ```
++ `client.get_user_profile`
+    + Get a user's profile information.
+    + @param `userID` String full Matrix user ID
+    + @return `User` with `id`, `displayname`, `avatar_url`
+    + If the homeserver returns an error, the raw error dict is returned instead.
+    + example:
+    ```python
+    profile = await client.get_user_profile("@alice:example.org")
+    print(profile.displayname)
+    print(profile.avatar_url)
+    ```
 + `client.get_bot_info`
     + Get comprehensive bot information
     + @return Dict containing user_id, device_id, auth_type, and homeserver
