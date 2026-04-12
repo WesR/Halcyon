@@ -14,6 +14,7 @@ import halcyon.restrunner
 from halcyon.message import *
 from halcyon.room import *
 from halcyon.enums import *
+from halcyon.events import Event
 from halcyon.security import configure_security
 
 class Client:
@@ -294,23 +295,28 @@ class Client:
             else:
                 await self.on_message(newMsg)
 
+        await self.on_event(Event(event, room_id=room_id, source="timeline"))
+
     async def _process_state_event(self, event, room_id):
-        pass
+        await self.on_event(Event(event, room_id=room_id, source="state"))
 
     async def _process_ephemeral_event(self, event, room_id):
-        pass
+        await self.on_event(Event(event, room_id=room_id, source="ephemeral"))
 
     async def _process_room_account_data_event(self, event, room_id):
-        pass
+        await self.on_event(Event(event, room_id=room_id, source="account_data"))
 
     async def _process_presence_events(self, presence_data):
-        pass
+        for event in presence_data.get("events", []):
+            await self.on_event(Event(event, source="presence"))
 
     async def _process_to_device_events(self, to_device_data):
-        pass
+        for event in to_device_data.get("events", []):
+            await self.on_event(Event(event, source="to_device"))
 
     async def _process_global_account_data(self, account_data):
-        pass
+        for event in account_data.get("events", []):
+            await self.on_event(Event(event, source="account_data"))
 
     async def send_message(self, roomID, body, textFormat=None, replyTo=None, isNotice=False):
         """
@@ -559,6 +565,10 @@ class Client:
 
     async def on_room_leave(self, roomID):
         """on room leave passes room id"""
+        pass
+
+    async def on_event(self, event):
+        """Generic event hook. Receives an Event for every sync event."""
         pass
 
     async def _halcyonMainLoop(self):
