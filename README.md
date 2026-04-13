@@ -34,6 +34,7 @@ Ask questions in the matrix chat [#halcyon:blackline.xyz](https://matrix.to/#/#h
 - Typed event models: `Event`, `MemberEvent`, `ReactionEvent`, `RedactionEvent`, `StickerEvent`, `TypingEvent`, `ReceiptEvent`, `PresenceEvent`, `AccountDataEvent`
 - `User` model with sender enrichment on events (`event.sender_user`)
 - Room and message objects for incoming events
+- `message` helpers for bot authors: `message.author`, `message.text`, `message.sticker`, `message.attachments`
 - Documentation in [usage.md](./usage.md)
 
 ## Getting started
@@ -65,15 +66,19 @@ async def on_room_invite(room):
 @client.event
 async def on_message(message):
     """If we see a message with the phrase 'give me random', do a reply message with 32 random characters"""
-    print(message.event.id)
-    if "give me random" in message.content.body:
+    print(message.id)
+    if message.sticker:
+        await client.send_message(message.room.id, body="I saw a sticker!")
+        return
+
+    if "give me random" in message.text:
         await client.send_typing(message.room.id) # This typing notification will let the user know we've seen their message
         # Use async HTTP client for external requests (non-blocking)
         async with aiohttp.ClientSession() as session:
             async with session.get("https://random.wesring.com") as resp:
                 data = json.loads(await resp.text())
                 body = f"This looks random: {data['value']}"
-        await client.send_message(message.room.id, body=body, replyTo=message.event.id)
+        await client.send_message(message.room.id, body=body, replyTo=message.id)
 
 
 @client.event

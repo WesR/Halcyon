@@ -141,7 +141,7 @@ Halcyon provides typed hooks for common events and a generic fallback for everyt
 + `async def on_ready():`
     + Called after login, right before we start handling messages.
 + `async def on_message(message):`
-    + Called for message-like timeline content. Right now this includes `m.room.message` and `m.sticker`. Receives a unified `message` object.
+    + Called for message-like timeline content. Right now this includes `m.room.message` and `m.sticker`. Receives a unified `message` object with developer-friendly helpers like `message.author`, `message.text`, `message.sticker`, and `message.attachments`.
 + `async def on_message_edit(message):`
     + Called when a message is edited (has `m.relates_to` with `rel_type: m.replace`).
 + `async def on_reaction(event):`
@@ -284,8 +284,42 @@ async def on_message(message):
     message.room.tombstone_replacement_room #room ID of the replacement room
 
     # Message-like helpers
+    message.id #event ID
+    message.author.id #sender user ID
+    message.author.displayname #sender display name when known
+    message.author.avatar_url #sender avatar when known
     message.type # "m.room.message" or "m.sticker"
+    message.text #text body for text/notice/emote messages, else ""
+    message.sticker #Sticker object for sticker events, else None
+    message.attachments #list of Attachment objects for image/file/audio/video messages
+    message.body #normalized body/helper for message-like events, defaults ""
+    message.url #normalized MXC URL/helper for sticker and attachment messages
+    message.info #normalized FileInfo/helper for sticker and attachment messages
     message.is_sticker #True for sticker timeline events
+
+    # Sticker helper object
+    if message.sticker:
+        message.sticker.body
+        message.sticker.url
+        message.sticker.info
+        message.sticker.width
+        message.sticker.height
+        message.sticker.mimetype
+        message.sticker.thumbnail_url
+
+    # Attachment helper objects
+    if message.attachments:
+        attachment = message.attachments[0]
+        attachment.type
+        attachment.body
+        attachment.url
+        attachment.filename
+        attachment.info
+        attachment.width
+        attachment.height
+        attachment.mimetype
+        attachment.duration
+        attachment.thumbnail_url
 ```
 
 

@@ -94,7 +94,7 @@ class TestMessage:
         
         assert msg._hasData is True
         assert msg.content is not None
-        assert msg.content.body is None
+        assert msg.content.body == ""
         assert msg.content.type is None
         
     def test_message_with_room(self):
@@ -114,6 +114,60 @@ class TestMessage:
         assert msg.room is not None
         assert msg.room.id == "!test:matrix.org"
 
+    def test_message_has_developer_friendly_id_alias(self, sample_message_event):
+        msg = message(sample_message_event)
+        assert msg.id == "$tBqxdcM:matrix.org"
+
+    def test_message_text_property_for_text_messages(self, sample_message_event):
+        msg = message(sample_message_event)
+        assert msg.text == "Hello world"
+
+    def test_message_text_property_not_used_for_media_messages(self, sample_image_event):
+        msg = message(sample_image_event)
+        assert msg.text == ""
+
+    def test_message_attachments_for_image_messages(self, sample_image_event):
+        msg = message(sample_image_event)
+        assert len(msg.attachments) == 1
+        attachment = msg.attachments[0]
+        assert attachment.type == msgType.IMAGE
+        assert attachment.url == "mxc://matrix.org/abcdef123456"
+        assert attachment.width == 3024
+        assert attachment.height == 4032
+        assert attachment.thumbnail_url == "mxc://matrix.org/thumbnail123"
+
+    def test_message_author_uses_room_member_details(self):
+        from halcyon.room import room
+
+        test_room = room(roomID="!test:matrix.org")
+        test_room.apply_state_event(
+            {
+                "type": "m.room.member",
+                "state_key": "@user:matrix.org",
+                "sender": "@user:matrix.org",
+                "content": {
+                    "membership": "join",
+                    "displayname": "Alice",
+                    "avatar_url": "mxc://matrix.org/alice",
+                },
+            }
+        )
+
+        msg = message(
+            {
+                "type": "m.room.message",
+                "sender": "@user:matrix.org",
+                "content": {"msgtype": "m.text", "body": "hello"},
+                "origin_server_ts": 1632894724739,
+                "event_id": "$test:matrix.org",
+            },
+            test_room,
+        )
+
+        assert msg.author.id == "@user:matrix.org"
+        assert msg.author.displayname == "Alice"
+        assert msg.author.avatar_url == "mxc://matrix.org/alice"
+
 
 class TestMessageContent:
     """Test the MessageContent nested class"""
@@ -125,7 +179,7 @@ class TestMessageContent:
         content = message.messageContent(None)
         assert bool(content) is False
         assert content.type is None
-        assert content.body is None
+        assert content.body == ""
         
     def test_content_boolean_check(self):
         """Test __bool__ behavior"""
@@ -377,6 +431,16 @@ class TestNewMessageTypes:
 
         msg = Message(sticker_event)
         assert msg.is_sticker is True
+        assert msg.text == ""
+        assert msg.sticker is not None
+        assert msg.sticker.body == "party parrot"
+        assert msg.sticker.url == "mxc://matrix.org/sticker123"
+        assert msg.sticker.width == 128
+        assert msg.sticker.height == 128
+        assert msg.body == "party parrot"
+        assert msg.url == "mxc://matrix.org/sticker123"
+        assert msg.info.width == 128
+        assert msg.attachments == []
         assert msg.content.body == "party parrot"
         assert msg.content.url == "mxc://matrix.org/sticker123"
         assert msg.content.info.width == 128
@@ -559,3 +623,20 @@ class TestBackwardCompatibility:
         assert content.server_notice_type is None
         assert content.from_device is None
         assert content.methods is None
+
+    def test_empty_message_content_uses_safe_string_defaults(self):
+        content = MessageContent({})
+        assert content.body == ""
+        assert content.formattedBody == ""
+
+    def test_message_body_uses_safe_string_default(self):
+        msg = Message(
+            {
+                "type": "m.room.message",
+                "sender": "@user:matrix.org",
+                "content": {},
+                "origin_server_ts": 1632894724739,
+                "event_id": "$test:matrix.org",
+            }
+        )
+        assert msg.body == ""

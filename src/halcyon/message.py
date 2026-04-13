@@ -2,9 +2,10 @@ from pydantic import BaseModel, Field, field_validator, PrivateAttr
 from typing import Optional, Dict, Any, Union, List
 from halcyon.enums import msgType
 from halcyon.security import get_nested_config, get_message_config, get_security_mode
+from halcyon.user import User
 
 """
-    Matrix message content handler. Supports all Matrix message types with full spec compliance (v1.15).
+    Matrix message content handler. Supports all Matrix message types with full spec compliance (v1.17).
     
     Fully Supported Message Types:
         m.text - Text messages with HTML formatting support
@@ -119,17 +120,114 @@ class FileInfo(BaseModel):
         return bool(self._raw)
 
 
+class Sticker(BaseModel):
+    """Matrix sticker event"""
+    model_config = get_nested_config()
+
+    body: str = ""
+    url: Optional[str] = None
+    info: Optional[FileInfo] = None
+    _raw: Optional[Dict[str, Any]] = PrivateAttr(default_factory=dict)
+
+    def __init__(self, raw_content: Optional[Dict[str, Any]] = None, **kwargs):
+        if raw_content:
+            super().__init__(
+                body=raw_content.get("body") or "",
+                url=raw_content.get("url"),
+                info=FileInfo(raw_content.get("info")) if raw_content.get("info") else None,
+                **kwargs
+            )
+            self._raw = raw_content
+        else:
+            super().__init__(**kwargs)
+            self._raw = {}
+
+    def __bool__(self):
+        return bool(self._raw)
+
+    @property
+    def width(self):
+        return self.info.width if self.info else None
+
+    @property
+    def height(self):
+        return self.info.height if self.info else None
+
+    @property
+    def size(self):
+        return self.info.size if self.info else None
+
+    @property
+    def mimetype(self):
+        return self.info.mimetype if self.info else None
+
+    @property
+    def thumbnail_url(self):
+        return self.info.thumbnail.url if self.info and self.info.thumbnail else None
+
+
+class Attachment(BaseModel):
+    """media attachment"""
+    model_config = get_nested_config()
+
+    type: Optional[msgType] = None
+    body: str = ""
+    url: Optional[str] = None
+    file: Optional[Dict[str, Any]] = None
+    filename: Optional[str] = None
+    info: Optional[FileInfo] = None
+
+    @classmethod
+    def from_message_content(cls, content: Optional["MessageContent"]):
+        if not content or not content.type:
+            return None
+        if content.type not in (msgType.IMAGE, msgType.FILE, msgType.AUDIO, msgType.VIDEO):
+            return None
+        return cls(
+            type=content.type,
+            body=content.body,
+            url=content.url,
+            file=content.file,
+            filename=content.filename,
+            info=content.info,
+        )
+
+    @property
+    def width(self):
+        return self.info.width if self.info else None
+
+    @property
+    def height(self):
+        return self.info.height if self.info else None
+
+    @property
+    def size(self):
+        return self.info.size if self.info else None
+
+    @property
+    def mimetype(self):
+        return self.info.mimetype if self.info else None
+
+    @property
+    def duration(self):
+        return self.info.duration if self.info else None
+
+    @property
+    def thumbnail_url(self):
+        return self.info.thumbnail.url if self.info and self.info.thumbnail else None
+
+
 class MessageContent(BaseModel):
     """Matrix message content with support for all message types"""
     model_config = get_nested_config(populate_by_name=True)
     
     # Core fields (all message types)
     type: Optional[msgType] = Field(None, alias="msgtype")
-    body: Optional[str] = None
+    body: str = ""
     
     # Text formatting fields
     format: Optional[str] = None
-    formattedBody: Optional[str] = Field(None, alias="formatted_body")
+    formattedBody: str = Field("", alias="formatted_body")
     
     # File/media fields
     url: Optional[str] = None
@@ -165,9 +263,9 @@ class MessageContent(BaseModel):
         if raw_content:
             super().__init__(
                 type=raw_content.get("msgtype"),
-                body=raw_content.get("body"),
+                body=raw_content.get("body") or "",
                 format=raw_content.get("format"),
-                formattedBody=raw_content.get("formatted_body"),
+                formattedBody=raw_content.get("formatted_body") or "",
                 url=raw_content.get("url"),
                 file=raw_content.get("file"),
                 filename=raw_content.get("filename"),
@@ -299,11 +397,70 @@ class Message(BaseModel):
     def is_sticker(self):
         return self.type == "m.sticker"
 
+    @property
+    def id(self):
+        return self.event.id if self.event else None
+
+    @property
+    def author(self):
+        if self.room and self.sender and self.sender in self.room.member_details:
+            member = self.room.member_details[self.sender]
+            return User(
+                id=self.sender,
+                displayname=member.displayname,
+                avatar_url=member.avatar_url,
+                membership=member.membership,
+            )
+        return User(id=self.sender) if self.sender else None
+
+    @property
+    def text(self):
+        if not self.content or self.is_sticker:
+            return ""
+        if self.content.type in (msgType.TEXT, msgType.NOTICE, msgType.EMOTE):
+            return self.content.body or ""
+        return ""
+
+    @property
+    def sticker(self):
+        if not self.is_sticker:
+            return None
+        return Sticker(self.content._raw if self.content else None)
+
+    @property
+    def attachments(self):
+        attachment = Attachment.from_message_content(self.content)
+        return [attachment] if attachment else []
+
+    @property
+    def body(self):
+        if self.sticker:
+            return self.sticker.body or ""
+        return self.content.body if self.content else ""
+
+    @property
+    def url(self):
+        if self.sticker:
+            return self.sticker.url
+        if self.attachments:
+            return self.attachments[0].url
+        return self.content.url if self.content else None
+
+    @property
+    def info(self):
+        if self.sticker:
+            return self.sticker.info
+        if self.attachments:
+            return self.attachments[0].info
+        return self.content.info if self.content else None
+
 
 # Create compatibility aliases for the old nested class structure
 message = Message
 message.messageContent = MessageContent
 message.idReturn = IdReturn
 message.relates = Relates
+message.stickerData = Sticker
+message.attachmentData = Attachment
 MessageContent.fileInfo = FileInfo
 FileInfo.fileThumbnail = FileThumbnail
