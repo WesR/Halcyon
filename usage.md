@@ -52,7 +52,7 @@ async def on_room_invite(room):
 async def on_message(message):
     """If we see a message with the phrase 'give me random', do a reply message with 32 random characters"""
     print(message.event.id)
-    if "give me random" in message.content.body:
+    if "give me random" in message.text:
         await client.send_typing(message.room.id) # This typing notification will let the user know we've seen their message
         # Use async HTTP client for external requests (non-blocking)
         async with aiohttp.ClientSession() as session:
@@ -179,10 +179,10 @@ Halcyon provides typed hooks for common events and a generic fallback for everyt
 | account data | `AccountDataEvent` | `on_event` | account_data |
 | all other types | `Event` | `on_event` | varies |
 
-All event objects expose `.sender_user` (a `User` with `id`, `displayname`, `avatar_url`) when sender info is available in the room cache.
+Event objects delivered to `on_event` expose `.sender_user` (a `User` with `id`, `displayname`, `avatar_url`) when sender info is available in the room cache. The `message` object delivered to `on_message` exposes `message.author` for the same purpose.
 
 ## halcyon room object
-Below are all of the current values stored in the room objects, inside an example usage of on_message(message). The room cache is updated live from sync state events. Non populated values default to none, or an empty list where required.
+Below are all of the current values stored in the room objects, inside an example usage of on_message(message). The room cache is updated live from sync state events. Non populated values default to `None`, `""`, or an empty list depending on the field.
 ```python
 @client.event
 async def on_message(message):
